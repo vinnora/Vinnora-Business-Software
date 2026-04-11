@@ -1,0 +1,18 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#4F46E5" opacity="0.1" stroke="#4F46E5" strokeWidth="2"/>
+  
+  <!-- Main icon: stylized V with business elements -->
+  <g transform="translate(100, 100)">
+    <!-- V shape -->
+    <path d="M -25 -30 L 0 20 L 25 -30" stroke="#4F46E5" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    
+    <!-- Horizontal line (business bar) -->
+    <line x1="-30" y1="30" x2="30" y2="30" stroke="#4F46E5" strokeWidth="6" strokeLinecap="round"/>
+    
+    <!-- Dots representing data/metrics -->
+    <circle cx="-15" cy="45" r="3" fill="#4F46E5"/>
+    <circle cx="0" cy="45" r="3" fill="#4F46E5"/>
+    <circle cx="15" cy="45" r="3" fill="#4F46E5"/>
+  </g>
+</svg>
