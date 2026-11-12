@@ -137,7 +137,7 @@ export default function ContentPage() {
         <Field label="File URL" required><TextInput value={form.fileUrl} onChange={e => setForm({ ...form, fileUrl: e.target.value })} placeholder="https://..." /></Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Thumbnail URL"><TextInput value={form.thumbnailUrl || ''} onChange={e => setForm({ ...form, thumbnailUrl: e.target.value })} /></Field>
-          <Field label="Folder"><TextInput value={form.folder || ''} onChange={e => setForm({ ...form, folder: e.target.value })} placeholder="e.g. campaigns/q2" /></Field>
+          <Field label="Folder"><TextInput value={form.folder || ''} onChange={e => setForm({ ...form, folder: e.target.value })} placeholder="e.g. promotions/q2" /></Field>
           <Field label="MIME Type"><TextInput value={form.mimeType || ''} onChange={e => setForm({ ...form, mimeType: e.target.value })} placeholder="e.g. image/png" /></Field>
           <Field label="File Size (bytes)"><TextInput type="number" value={form.fileSize || ''} onChange={e => setForm({ ...form, fileSize: e.target.value })} /></Field>
         </div>

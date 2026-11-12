@@ -44,7 +44,7 @@ export default function SalesServiceHome() {
     <div className="p-6">
       <div className="flex items-end justify-between mb-6">
         <div>
-          <div className="text-xs uppercase tracking-wide text-gray-500">Sales &amp; Service</div>
+          <div className="text-xs uppercase tracking-wide text-gray-500">Sell &amp; Support</div>
           <h1 className="text-2xl font-semibold text-gray-900">Welcome back</h1>
           <p className="text-sm text-gray-500 mt-1">Your CRM at a glance.</p>
         </div>
@@ -52,31 +52,31 @@ export default function SalesServiceHome() {
           href="/dashboard/sales-service/leads"
           className="px-4 py-2 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
         >
-          + New Lead
+          + New Enquiry
         </Link>
       </div>
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <KpiCard label="Accounts" value={summary.totalAccounts || 0} href="/dashboard/sales-service/accounts" tone="blue" />
-        <KpiCard label="Contacts" value={summary.totalContacts || 0} href="/dashboard/sales-service/contacts" tone="indigo" />
-        <KpiCard label="Open Leads" value={summary.openLeads || 0} href="/dashboard/sales-service/leads" tone="amber" />
-        <KpiCard label="Open Opps" value={summary.openOpportunities || 0} href="/dashboard/sales-service/opportunities" tone="green" />
-        <KpiCard label="Open Cases" value={summary.openCases || 0} href="/dashboard/sales-service/cases" tone="red" />
+        <KpiCard label="Companies" value={summary.totalAccounts || 0} href="/dashboard/sales-service/accounts" tone="blue" />
+        <KpiCard label="People" value={summary.totalContacts || 0} href="/dashboard/sales-service/contacts" tone="indigo" />
+        <KpiCard label="Open Enquiries" value={summary.openLeads || 0} href="/dashboard/sales-service/leads" tone="amber" />
+        <KpiCard label="Open Deals" value={summary.openOpportunities || 0} href="/dashboard/sales-service/opportunities" tone="green" />
+        <KpiCard label="Open Tickets" value={summary.openCases || 0} href="/dashboard/sales-service/cases" tone="red" />
         <KpiCard label="Overdue" value={summary.overdueActivities || 0} href="/dashboard/sales-service/activities" tone="orange" />
       </div>
 
       {/* Forecast row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <ForecastCard label="Pipeline Value" value={fmtINR(summary.pipelineValue)} hint="All open opportunities" />
-        <ForecastCard label="Weighted Forecast" value={fmtINR(summary.weightedPipeline)} hint="By stage probability" />
+        <ForecastCard label="Pipeline Value" value={fmtINR(summary.pipelineValue)} hint="All open deals" />
+        <ForecastCard label="Weighted Forecast" value={fmtINR(summary.weightedPipeline)} hint="By deal stage probability" />
         <ForecastCard label="Closed Won (QTD)" value={fmtINR(summary.wonThisQuarter)} hint="Quarter to date" highlight />
       </div>
 
       {/* Pipeline by stage */}
       <div className="bg-white border border-gray-200 rounded-lg p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-900">Pipeline by Stage</h2>
+          <h2 className="text-base font-semibold text-gray-900">Pipeline by Deal Stage</h2>
           <Link href="/dashboard/sales-service/opportunities" className="text-xs text-[#0176d3] hover:underline">
             View pipeline →
           </Link>
@@ -84,7 +84,7 @@ export default function SalesServiceHome() {
         {loading ? (
           <div className="text-sm text-gray-500">Loading…</div>
         ) : pipeline.length === 0 ? (
-          <div className="text-sm text-gray-500">No opportunities yet.</div>
+          <div className="text-sm text-gray-500">No deals yet.</div>
         ) : (
           <div className="space-y-2">
             {pipeline.map((s) => (

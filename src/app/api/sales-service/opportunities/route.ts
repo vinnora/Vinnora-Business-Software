@@ -1,101 +1,116 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
+import mongoose from 'mongoose';
+import { getAuthContext } from '@/lib/auth-helpers';
+import { getObjectAccess, buildCreateDoc, buildUpdate } from '@/lib/platform/access';
+import { legacyOwnerKey, tenantOf } from '@/lib/platform/metadata';
+import { BadRequestError, NotFoundError, platformErrorResponse } from '@/lib/platform/errors';
 import Opportunity, { STAGE_PROBABILITY, OpportunityStage } from '@/models/Opportunity';
 import { runWorkflows } from '@/lib/workflows';
 
 export async function GET(req: NextRequest) {
   try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Opportunity');
+    access.assert('read');
 
     const { searchParams } = new URL(req.url);
     const stage = searchParams.get('stage');
     const accountId = searchParams.get('accountId');
     const search = searchParams.get('search');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (stage) filter.stage = stage;
     if (accountId) filter.accountId = accountId;
     if (search) filter.name = { $regex: search, $options: 'i' };
 
-    const opportunities = await Opportunity.find(filter).sort({ closeDate: 1 }).limit(200);
-    return NextResponse.json(opportunities);
+    const opportunities = await Opportunity.find({ $and: [await access.readFilter(), filter] })
+      .sort({ closeDate: 1 })
+      .limit(200);
+    return NextResponse.json(access.shapeMany(opportunities));
   } catch (error) {
-    console.error('Error fetching opportunities:', error);
-    return NextResponse.json([], { status: 200 });
+    return platformErrorResponse(error, 'Error fetching opportunities:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
-
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Opportunity');
+    // probability is derived from the stage server-side
     const body = await req.json();
-    if (!body.name || !body.closeDate) {
-      return NextResponse.json(
-        { error: 'name and closeDate are required' },
-        { status: 400 }
-      );
-    }
+    delete body.probability;
 
-    const stage = (body.stage || 'Prospecting') as OpportunityStage;
-    const opportunity = await Opportunity.create({
-      ...body,
-      userId,
-      stage,
-      probability: STAGE_PROBABILITY[stage] ?? 10,
+    const prepared = await access.prepareWrite(body, undefined, { passthrough: true });
+    const stage = ((prepared.set.stage as string) || 'Prospecting') as OpportunityStage;
+    const opportunity = await Opportunity.create(
+      buildCreateDoc(access, prepared, { stage, probability: STAGE_PROBABILITY[stage] ?? 10 }),
+    );
+    await runWorkflows({
+      objectType: 'Opportunity',
+      event: 'created',
+      record: opportunity,
+      userId: legacyOwnerKey(ctx),
+      orgId: tenantOf(ctx),
     });
-    await runWorkflows({ objectType: 'Opportunity', event: 'created', record: opportunity, userId });
-    return NextResponse.json(opportunity, { status: 201 });
+    return NextResponse.json(access.shape(opportunity), { status: 201 });
   } catch (error) {
-    console.error('Error creating opportunity:', error);
-    return NextResponse.json({ error: 'Failed to create opportunity' }, { status: 500 });
+    return platformErrorResponse(error, 'Error creating opportunity:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
-    await dbConnect();
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Opportunity');
     const body = await req.json();
     const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    if (!_id) throw new BadRequestError('_id required');
+    if (!mongoose.isValidObjectId(_id)) throw new BadRequestError('Invalid _id');
 
-    if (updates.stage) {
-      updates.probability = STAGE_PROBABILITY[updates.stage as OpportunityStage] ?? 10;
+    const existing = await Opportunity.findOne({ $and: [{ _id }, await access.readFilter()] });
+    if (!existing) throw new NotFoundError('Deal not found');
+
+    if (updates.stage) delete updates.probability; // derived from stage below
+    const prepared = await access.prepareWrite(updates, existing, { passthrough: true });
+
+    const extraSet: Record<string, unknown> = {};
+    if (prepared.set.stage !== undefined && prepared.set.stage !== null) {
+      extraSet.probability = STAGE_PROBABILITY[prepared.set.stage as OpportunityStage] ?? 10;
     }
 
-    const opportunity = await Opportunity.findByIdAndUpdate(_id, updates, { new: true });
+    const opportunity = await Opportunity.findByIdAndUpdate(_id, buildUpdate(access, prepared, extraSet), { new: true });
     if (opportunity) {
       await runWorkflows({
         objectType: 'Opportunity',
         event: 'fieldChanged',
         record: opportunity,
-        userId: opportunity.userId,
-        changedFields: Object.keys(updates),
+        userId: legacyOwnerKey(ctx),
+        orgId: tenantOf(ctx),
+        changedFields: prepared.changed,
       });
     }
-    return NextResponse.json(opportunity);
+    return NextResponse.json(access.shape(opportunity));
   } catch (error) {
-    console.error('Error updating opportunity:', error);
-    return NextResponse.json({ error: 'Failed to update opportunity' }, { status: 500 });
+    return platformErrorResponse(error, 'Error updating opportunity:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
-    await dbConnect();
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Opportunity');
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await Opportunity.findByIdAndDelete(id);
+    if (!id) throw new BadRequestError('id required');
+    if (!mongoose.isValidObjectId(id)) throw new BadRequestError('Invalid id');
+
+    const existing = await Opportunity.findOne({ $and: [{ _id: id }, await access.readFilter()] });
+    if (!existing) throw new NotFoundError('Deal not found');
+    access.assert('delete');
+
+    await Opportunity.deleteOne({ _id: existing._id });
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting opportunity:', error);
-    return NextResponse.json({ error: 'Failed to delete opportunity' }, { status: 500 });
+    return platformErrorResponse(error, 'Error deleting opportunity:');
   }
 }

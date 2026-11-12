@@ -62,7 +62,7 @@ export default function SignUp() {
             <span className="font-semibold">Move forward together.</span>
           </h2>
           <p className="mt-3 text-sm text-white/70 max-w-md">
-            From the first lead to the last invoice — Vinnora keeps every team aligned in one
+            From the first enquiry to the last invoice — Vinnora keeps every team aligned in one
             connected workspace.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">

@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { CustomObjectNav } from '@/components/platform/CustomObjectNav';
 import type { ReactNode } from 'react';
 import { InventoryIcon } from '@/components/ModuleIcon';
+import QuickStart from '@/components/QuickStart';
+import { QUICK_START } from '@/lib/quick-start-steps';
 
 const NAV = [
   { href: '/dashboard/inventory', label: 'Home', icon: 'home' },
@@ -16,7 +19,7 @@ const NAV = [
   { href: '/dashboard/inventory/barcodes', label: 'Barcodes', icon: 'barcode' },
   { href: '/dashboard/inventory/labels', label: 'Labels', icon: 'tag' },
   { href: '/dashboard/inventory/reports', label: 'Reports', icon: 'chart' },
-  { href: '/dashboard/inventory/setup', label: 'Setup', icon: 'gear' },
+  { href: '/dashboard/inventory/setup', label: 'Settings', icon: 'gear' },
 ];
 
 function Icon({ name, className = 'h-5 w-5' }: { name: string; className?: string }) {
@@ -86,6 +89,7 @@ export default function InventoryLayout({ children }: { children: ReactNode }) {
               <span>{item.label}</span>
             </Link>
           ))}
+          <CustomObjectNav app="inventory" basePath="/dashboard/inventory" />
         </nav>
         {/* Decorative ember glow at bottom of sidebar */}
         <div
@@ -125,6 +129,13 @@ export default function InventoryLayout({ children }: { children: ReactNode }) {
 
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+      <QuickStart
+        moduleKey="inventory"
+        moduleName={QUICK_START.inventory.name}
+        steps={QUICK_START.inventory.steps}
+        accentFrom={QUICK_START.inventory.accentFrom}
+        accentTo={QUICK_START.inventory.accentTo}
+      />
     </div>
   );
 }

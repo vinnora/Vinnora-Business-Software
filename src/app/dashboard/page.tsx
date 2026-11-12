@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { ComponentType } from 'react';
 import { Waves } from '@/components/ocean/Waves';
 import { Bubbles } from '@/components/ocean/Bubbles';
+import { EnvironmentSwitcher } from '@/components/platform/EnvironmentSwitcher';
 import {
   SalesServiceIcon,
   AccountingIcon,
@@ -25,8 +26,8 @@ type ModuleEntry = {
 
 const modules: ModuleEntry[] = [
   {
-    name: 'Sales & Service',
-    description: 'CRM, pipelines, cases & field service',
+    name: 'Sell & Support',
+    description: 'CRM, deals, tickets & field service',
     href: '/dashboard/sales-service',
     icon: SalesServiceIcon,
     gradient: 'linear-gradient(90deg, #0077B6, #00B4D8)',
@@ -50,7 +51,7 @@ const modules: ModuleEntry[] = [
   },
   {
     name: 'Marketing',
-    description: 'Campaigns & pricing strategy',
+    description: 'Promotions & pricing strategy',
     href: '/dashboard/marketing',
     icon: MarketingIcon,
     gradient: 'linear-gradient(90deg, #5A7A8C, #D6E5EC)',
@@ -98,6 +99,19 @@ export default function Dashboard() {
             {session ? (
               <>
                 <span className="text-sm text-white/80 hidden sm:inline">Welcome, {userName}</span>
+                <EnvironmentSwitcher />
+                <Link
+                  href="/dashboard/reports"
+                  className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition"
+                >
+                  Reports
+                </Link>
+                <Link
+                  href="/dashboard/setup"
+                  className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition"
+                >
+                  Settings
+                </Link>
                 <button
                   onClick={() => signOut()}
                   className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition"
@@ -123,7 +137,7 @@ export default function Dashboard() {
             Pick an App that suits your business
           </h2>
           <p className="text-sm text-[#013A63] mt-2 max-w-xl">
-            Every app connects to the others so your team stays in sync from first lead to
+            Every app connects to the others so your team stays in sync from first enquiry to
             final report. Start with one app free, or unlock the full suite.
           </p>
         </div>

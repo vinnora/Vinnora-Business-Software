@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { PageHeader } from '../_components/PageHeader';
-import { Modal, Field, TextInput, SelectInput } from '../_components/Modal';
+import { ActionErrorBanner, useActionError } from '../_components/ActionError';
+import { RecordFormModal, moduleSubmit, useDescribe } from '@/components/platform/RecordForm';
+import { ThemeScope, api, useLoad } from '@/components/platform/ui';
+import { MODULE_THEMES } from '@/components/platform/themes';
 
 type Contact = {
   _id: string;
@@ -16,59 +19,39 @@ type Contact = {
   department?: string;
 };
 
-type Account = { _id: string; name: string };
+const API = '/api/sales-service/contacts';
 
 export default function ContactsPage() {
-  const [items, setItems] = useState<Contact[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<Partial<Contact>>({});
+  const [query, setQuery] = useState('');
+  const [editing, setEditing] = useState<Contact | 'new' | null>(null);
+  const actionError = useActionError();
+  const access = useDescribe('Contact').data?.access;
+  const canCreate = access?.create ?? true;
+  const canEdit = access?.edit ?? true;
+  const canDelete = access?.delete ?? true;
 
-  const load = async () => {
-    setLoading(true);
-    const url = search
-      ? `/api/sales-service/contacts?search=${encodeURIComponent(search)}`
-      : '/api/sales-service/contacts';
-    const data = await fetch(url).then((r) => r.json());
-    setItems(Array.isArray(data) ? data : []);
-    setLoading(false);
-  };
+  const { data, error: loadError, loading, reload } = useLoad(
+    () => api<Contact[]>(query ? `${API}?search=${encodeURIComponent(query)}` : API),
+    [query],
+  );
+  const items = Array.isArray(data) ? data : [];
 
-  const loadAccounts = async () => {
-    const data = await fetch('/api/sales-service/accounts').then((r) => r.json());
-    setAccounts(Array.isArray(data) ? data : []);
-  };
-
-  useEffect(() => {
-    load();
-    loadAccounts();
-  }, []);
-
-  const save = async () => {
-    if (!form.firstName || !form.lastName) return;
-    const accountName = accounts.find((a) => a._id === form.accountId)?.name;
-    await fetch('/api/sales-service/contacts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, accountName }),
-    });
-    setOpen(false);
-    setForm({});
-    load();
+  const applySearch = () => {
+    if (search === query) reload();
+    else setQuery(search);
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this contact?')) return;
-    await fetch(`/api/sales-service/contacts?id=${id}`, { method: 'DELETE' });
-    load();
+    if (!confirm('Delete this person?')) return;
+    await actionError.run(() => api(`${API}?id=${id}`, { method: 'DELETE' }));
+    reload();
   };
 
   return (
     <>
       <PageHeader
-        title="Contacts"
+        title="People"
         subtitle="Sales"
         count={items.length}
         actions={
@@ -76,19 +59,23 @@ export default function ContactsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && load()}
-              placeholder="Search contacts…"
+              onKeyDown={(e) => e.key === 'Enter' && applySearch()}
+              placeholder="Search people…"
               className="px-3 py-1.5 text-sm border border-gray-300 rounded focus:border-[#0176d3] focus:outline-none"
             />
-            <button
-              onClick={() => setOpen(true)}
-              className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
-            >
-              + New
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => setEditing('new')}
+                className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
+              >
+                + New
+              </button>
+            )}
           </>
         }
       />
+
+      <ActionErrorBanner error={actionError.error} onDismiss={() => actionError.setError(null)} />
 
       <div className="p-6">
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -97,7 +84,7 @@ export default function ContactsPage() {
               <tr>
                 <th className="text-left px-4 py-2.5">Name</th>
                 <th className="text-left px-4 py-2.5">Title</th>
-                <th className="text-left px-4 py-2.5">Account</th>
+                <th className="text-left px-4 py-2.5">Company</th>
                 <th className="text-left px-4 py-2.5">Email</th>
                 <th className="text-left px-4 py-2.5">Phone</th>
                 <th className="px-4 py-2.5"></th>
@@ -108,10 +95,14 @@ export default function ContactsPage() {
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Loading…</td>
                 </tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-red-600">{loadError}</td>
+                </tr>
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                    No contacts yet.
+                    No people yet.
                   </td>
                 </tr>
               ) : (
@@ -124,10 +115,17 @@ export default function ContactsPage() {
                     <td className="px-4 py-2.5 text-gray-600">{c.accountName || '—'}</td>
                     <td className="px-4 py-2.5 text-gray-600">{c.email || '—'}</td>
                     <td className="px-4 py-2.5 text-gray-600">{c.phone || '—'}</td>
-                    <td className="px-4 py-2.5 text-right">
-                      <button onClick={() => remove(c._id)} className="text-xs text-red-600 hover:underline">
-                        Delete
-                      </button>
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      {canEdit && (
+                        <button onClick={() => setEditing(c)} className="text-xs text-[#0176d3] hover:underline mr-3">
+                          Edit
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button onClick={() => remove(c._id)} className="text-xs text-red-600 hover:underline">
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -137,52 +135,19 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title="New Contact"
-        footer={
-          <>
-            <button onClick={() => setOpen(false)} className="px-3 py-1.5 text-sm border border-gray-300 rounded">
-              Cancel
-            </button>
-            <button onClick={save} className="px-3 py-1.5 text-sm bg-[#0176d3] text-white rounded">
-              Save
-            </button>
-          </>
-        }
-      >
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="First Name" required>
-            <TextInput value={form.firstName || ''} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
-          </Field>
-          <Field label="Last Name" required>
-            <TextInput value={form.lastName || ''} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
-          </Field>
-          <Field label="Title">
-            <TextInput value={form.title || ''} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          </Field>
-          <Field label="Department">
-            <TextInput value={form.department || ''} onChange={(e) => setForm({ ...form, department: e.target.value })} />
-          </Field>
-          <Field label="Account">
-            <SelectInput value={form.accountId || ''} onChange={(e) => setForm({ ...form, accountId: e.target.value })}>
-              <option value="">— None —</option>
-              {accounts.map((a) => (
-                <option key={a._id} value={a._id}>
-                  {a.name}
-                </option>
-              ))}
-            </SelectInput>
-          </Field>
-          <Field label="Email">
-            <TextInput type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          </Field>
-          <Field label="Phone">
-            <TextInput value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          </Field>
-        </div>
-      </Modal>
+      <ThemeScope theme={MODULE_THEMES['sales-service']}>
+        <RecordFormModal
+          object="Contact"
+          open={editing !== null}
+          record={editing && editing !== 'new' ? editing : undefined}
+          submit={moduleSubmit(API, editing && editing !== 'new' ? editing._id : undefined)}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            reload();
+          }}
+        />
+      </ThemeScope>
     </>
   );
 }

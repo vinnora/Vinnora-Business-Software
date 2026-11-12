@@ -52,10 +52,10 @@ export async function POST(request: NextRequest) {
 
       await Invitation.findByIdAndUpdate(invitation._id, { status: 'accepted', acceptedAt: new Date() });
 
-      return NextResponse.json({ message: 'Account created and joined organization' }, { status: 201 });
+      return NextResponse.json({ message: 'Account created and joined workspace' }, { status: 201 });
     }
 
-    // No invite — create new user + organization
+    // No invite — create new user + workspace (Organization)
     const firstApp = selectedApp || 'sales-service';
     const orgName = company || `${name}'s Workspace`;
 

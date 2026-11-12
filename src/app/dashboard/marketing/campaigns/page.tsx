@@ -139,7 +139,7 @@ export default function CampaignsPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this campaign?')) return;
+    if (!confirm('Delete this promotion?')) return;
     await fetch(`/api/marketing/campaigns?id=${id}`, { method: 'DELETE' });
     load();
   };
@@ -156,7 +156,7 @@ export default function CampaignsPage() {
   return (
     <>
       <PageHeader
-        title="Campaigns"
+        title="Promotions"
         subtitle="Marketing"
         count={items.length}
         actions={
@@ -165,7 +165,7 @@ export default function CampaignsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && load()}
-              placeholder="Search campaigns…"
+              placeholder="Search promotions…"
               className="px-3 py-1.5 text-sm border border-[#D6E5EC] rounded focus:border-[#5A7A8C] focus:outline-none"
             />
             <SelectInput value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
@@ -180,7 +180,7 @@ export default function CampaignsPage() {
                 <option key={s}>{s}</option>
               ))}
             </SelectInput>
-            <PrimaryButton onClick={startCreate}>+ New Campaign</PrimaryButton>
+            <PrimaryButton onClick={startCreate}>+ New Promotion</PrimaryButton>
           </>
         }
       />
@@ -212,7 +212,7 @@ export default function CampaignsPage() {
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="px-4 py-8 text-center text-[#94A8B8]">
-                    No campaigns yet.
+                    No promotions yet.
                   </td>
                 </tr>
               ) : (
@@ -267,7 +267,7 @@ export default function CampaignsPage() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title={editing ? `Edit Campaign` : 'New Campaign'}
+        title={editing ? `Edit Promotion` : 'New Promotion'}
         width="max-w-3xl"
         footer={
           <>
@@ -277,7 +277,7 @@ export default function CampaignsPage() {
         }
       >
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Campaign Name" required>
+          <Field label="Promotion Name" required>
             <TextInput
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -337,7 +337,7 @@ export default function CampaignsPage() {
           <TextInput
             value={form.goal}
             onChange={(e) => setForm({ ...form, goal: e.target.value })}
-            placeholder="e.g. Generate 500 leads"
+            placeholder="e.g. Generate 500 enquiries"
           />
         </Field>
         <Field label="Target Audience">

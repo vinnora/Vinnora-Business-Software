@@ -13,12 +13,14 @@ import {
   Badge,
 } from '../_components/ui';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
+import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
+import { APP_LABELS } from '@/lib/platform/types';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-type Tab = 'general' | 'workflows' | 'integrations' | 'connections' | 'subscription';
+type Tab = 'general' | 'workflows' | 'integrations' | 'connections' | 'objects' | 'access' | 'subscription';
 
 type WorkflowRule = {
   _id: string;
@@ -62,6 +64,8 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'workflows', label: 'Workflows', desc: 'Automate accounting events' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
+  { id: 'objects', label: 'Data Model', desc: 'Modules, fields, rules & layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Roles & access packs' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
@@ -85,7 +89,7 @@ export default function AccountingSetupPage() {
 
   return (
     <>
-      <PageHeader title="Setup" subtitle="Accounting" />
+      <PageHeader title="Settings" subtitle="Accounting" />
       <div className="flex">
         <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-7rem)]">
           <div className="p-3 text-xs uppercase tracking-wide text-gray-500 font-semibold">
@@ -111,6 +115,8 @@ export default function AccountingSetupPage() {
           {tab === 'workflows' && <WorkflowsTab />}
           {tab === 'integrations' && <IntegrationsTab />}
           {tab === 'connections' && <ConnectionsTab />}
+          {tab === 'objects' && <ModuleObjectManager app="accounting" />}
+          {tab === 'access' && <ModuleAccessLink app="accounting" />}
           {tab === 'subscription' && <SubscriptionPlan accentColor="#059669" accentBg="#ECFDF5" textColor="#1F2937" mutedColor="#6B7280" borderColor="#E5E7EB" />}
         </div>
       </div>
@@ -226,7 +232,7 @@ function WorkflowsTab() {
           <thead className="bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
               <th className="text-left px-4 py-2.5">Name</th>
-              <th className="text-left px-4 py-2.5">Object</th>
+              <th className="text-left px-4 py-2.5">Module</th>
               <th className="text-left px-4 py-2.5">Trigger</th>
               <th className="text-center px-4 py-2.5">Active</th>
               <th className="text-left px-4 py-2.5">Default</th>
@@ -273,7 +279,7 @@ function WorkflowsTab() {
         <Field label="Name" required>
           <TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </Field>
-        <Field label="Object Type">
+        <Field label="Module">
           <SelectInput value={form.objectType} onChange={(e) => setForm({ ...form, objectType: e.target.value })}>
             {OBJECT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </SelectInput>
@@ -472,14 +478,14 @@ function ConnectionsTab() {
               <tr key={c._id} className="border-t border-gray-100 hover:bg-gray-50">
                 <td className="px-4 py-2 font-medium text-gray-900">{c.name}</td>
                 <td className="px-4 py-2 text-gray-700">
-                  <span className="text-xs font-semibold uppercase text-emerald-700">{c.sourceApp}</span>
+                  <span className="text-xs font-semibold uppercase text-emerald-700">{(APP_LABELS as Record<string, string>)[c.sourceApp] ?? c.sourceApp}</span>
                   <span className="text-gray-400 mx-1">&rarr;</span>
                   <span>{c.sourceObject}</span>
                   <span className="text-gray-400 mx-1">&middot;</span>
                   <span className="text-xs text-gray-500">{c.sourceEvent}</span>
                 </td>
                 <td className="px-4 py-2 text-gray-700">
-                  <span className="text-xs font-semibold uppercase text-emerald-700">{c.targetApp}</span>
+                  <span className="text-xs font-semibold uppercase text-emerald-700">{(APP_LABELS as Record<string, string>)[c.targetApp] ?? c.targetApp}</span>
                   <span className="text-gray-400 mx-1">&rarr;</span>
                   <span>{c.targetAction}</span>
                 </td>

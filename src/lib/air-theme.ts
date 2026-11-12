@@ -1,5 +1,5 @@
 /**
- * Air theme — for the Marketing module.
+ * Air theme — for the Marketing (marketing) module.
  * Cool sky tones, soft mist, lavender hints.
  */
 

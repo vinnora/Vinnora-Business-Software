@@ -51,13 +51,16 @@ async function executeAction(
   action: IWorkflowAction,
   record: any,
   objectType: WorkflowObject,
-  userId: string
+  userId: string,
+  orgId?: string
 ) {
   const params = action.params || {};
+  // Stamp the tenant on anything we create when the caller knows it.
+  const owner = orgId ? { userId, orgId } : { userId };
   switch (action.type) {
     case 'createActivity': {
       await Activity.create({
-        userId,
+        ...owner,
         type: params.type || 'Task',
         subject: interpolate(params.subject || `Follow up on ${objectType}`, record),
         status: 'Open',
@@ -87,9 +90,9 @@ async function executeAction(
     case 'sendEmail': {
       // No SMTP wired — log as a Completed Email activity so it shows in the timeline.
       await Activity.create({
-        userId,
+        ...owner,
         type: 'Email',
-        subject: interpolate(params.subject || `Email to ${record.email ?? 'contact'}`, record),
+        subject: interpolate(params.subject || `Email to ${record.email ?? 'customer'}`, record),
         status: 'Completed',
         completedAt: new Date(),
         relatedToType: objectType,
@@ -115,7 +118,7 @@ async function executeAction(
         .toString()
         .padStart(5, '0')}`;
       await WorkOrder.create({
-        userId,
+        ...owner,
         workOrderNumber: num,
         subject: interpolate(params.subject || record.subject, record),
         status: 'New',
@@ -151,11 +154,18 @@ export async function runWorkflows(opts: {
   event: WorkflowEvent;
   record: any;
   userId: string;
+  /** Tenant key. When given, org-wide rules (or legacy rules owned by `userId`) match. */
+  orgId?: string;
   changedFields?: string[];
 }) {
   try {
-    const { objectType, event, record, userId, changedFields } = opts;
-    const filter: any = { userId, objectType, active: true };
+    const { objectType, event, record, userId, orgId, changedFields } = opts;
+    // In a sandbox only the sandbox's own rules run (never production rules / webhooks).
+    const filter: any = orgId?.startsWith('sbx:')
+      ? { orgId, objectType, active: true }
+      : orgId
+      ? { $or: [{ orgId }, { userId }], objectType, active: true }
+      : { userId, objectType, active: true };
     if (event === 'fieldChanged') {
       filter.triggerEvent = { $in: ['fieldChanged', 'updated'] };
     } else {
@@ -173,7 +183,7 @@ export async function runWorkflows(opts: {
       if (!evalConditions(record, rule.conditions, rule.conditionLogic)) continue;
 
       for (const action of rule.actions) {
-        await executeAction(action, record, objectType, userId);
+        await executeAction(action, record, objectType, userId, orgId);
       }
       rule.runCount = (rule.runCount || 0) + 1;
       rule.lastRunAt = new Date();

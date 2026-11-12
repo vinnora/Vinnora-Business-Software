@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { PageHeader } from '../_components/PageHeader';
-import { Modal, Field, TextInput, TextArea, SelectInput } from '../_components/Modal';
+import { ActionErrorBanner, useActionError } from '../_components/ActionError';
+import { RecordFormModal, moduleSubmit, useDescribe } from '@/components/platform/RecordForm';
+import { ThemeScope, api, useLoad } from '@/components/platform/ui';
+import { MODULE_THEMES } from '@/components/platform/themes';
 
 type Opportunity = {
   _id: string;
@@ -17,7 +20,7 @@ type Opportunity = {
   nextStep?: string;
 };
 
-type Account = { _id: string; name: string };
+const API = '/api/sales-service/opportunities';
 
 const STAGES = [
   'Prospecting',
@@ -45,58 +48,28 @@ const fmtINR = (n = 0) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 
 export default function OpportunitiesPage() {
-  const [items, setItems] = useState<Opportunity[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
-  const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<Partial<Opportunity>>({ stage: 'Prospecting', amount: 0 });
+  const [editing, setEditing] = useState<Opportunity | 'new' | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const actionError = useActionError();
+  const access = useDescribe('Opportunity').data?.access;
+  const canCreate = access?.create ?? true;
+  const canEdit = access?.edit ?? true;
+  const canDelete = access?.delete ?? true;
 
-  const load = async () => {
-    setLoading(true);
-    const data = await fetch('/api/sales-service/opportunities').then((r) => r.json());
-    setItems(Array.isArray(data) ? data : []);
-    setLoading(false);
-  };
-
-  const loadAccounts = async () => {
-    const data = await fetch('/api/sales-service/accounts').then((r) => r.json());
-    setAccounts(Array.isArray(data) ? data : []);
-  };
-
-  useEffect(() => {
-    load();
-    loadAccounts();
-  }, []);
-
-  const save = async () => {
-    if (!form.name || !form.closeDate) return;
-    const accountName = accounts.find((a) => a._id === form.accountId)?.name;
-    await fetch('/api/sales-service/opportunities', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, accountName }),
-    });
-    setOpen(false);
-    setForm({ stage: 'Prospecting', amount: 0 });
-    load();
-  };
+  const { data, error: loadError, loading, reload, setData } = useLoad(() => api<Opportunity[]>(API), []);
+  const items = Array.isArray(data) ? data : [];
 
   const moveStage = async (id: string, stage: string) => {
-    setItems((prev) => prev.map((o) => (o._id === id ? { ...o, stage } : o)));
-    await fetch('/api/sales-service/opportunities', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ _id: id, stage }),
-    });
-    load();
+    setData((prev) => (prev ? prev.map((o) => (o._id === id ? { ...o, stage } : o)) : prev));
+    await actionError.run(() => api(API, { method: 'PATCH', body: { _id: id, stage } }));
+    reload();
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this opportunity?')) return;
-    await fetch(`/api/sales-service/opportunities?id=${id}`, { method: 'DELETE' });
-    load();
+    if (!confirm('Delete this deal?')) return;
+    await actionError.run(() => api(`${API}?id=${id}`, { method: 'DELETE' }));
+    reload();
   };
 
   const totalValue = items
@@ -106,7 +79,7 @@ export default function OpportunitiesPage() {
   return (
     <>
       <PageHeader
-        title="Opportunities"
+        title="Deals"
         subtitle="Sales Pipeline"
         count={items.length}
         actions={
@@ -128,17 +101,23 @@ export default function OpportunitiesPage() {
                 List
               </button>
             </div>
-            <button
-              onClick={() => setOpen(true)}
-              className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
-            >
-              + New
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => setEditing('new')}
+                className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
+              >
+                + New
+              </button>
+            )}
           </>
         }
       />
 
-      {view === 'kanban' ? (
+      <ActionErrorBanner error={actionError.error} onDismiss={() => actionError.setError(null)} />
+
+      {view === 'kanban' && loadError ? (
+        <div className="p-6 text-sm text-red-600">{loadError}</div>
+      ) : view === 'kanban' ? (
         <div className="p-4 overflow-x-auto">
           <div className="flex gap-3 min-w-max">
             {STAGES.map((stage) => {
@@ -161,12 +140,19 @@ export default function OpportunitiesPage() {
                     {stageItems.map((o) => (
                       <div
                         key={o._id}
-                        draggable
+                        draggable={canEdit}
                         onDragStart={() => setDraggingId(o._id)}
                         onDragEnd={() => setDraggingId(null)}
-                        className="bg-white rounded shadow-sm border border-gray-200 p-3 cursor-move hover:shadow-md transition"
+                        className={`bg-white rounded shadow-sm border border-gray-200 p-3 hover:shadow-md transition ${canEdit ? 'cursor-move' : ''}`}
                       >
-                        <div className="text-sm font-medium text-[#0176d3] truncate">{o.name}</div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="text-sm font-medium text-[#0176d3] truncate">{o.name}</div>
+                          {canEdit && (
+                            <button onClick={() => setEditing(o)} className="text-xs text-[#0176d3] hover:underline shrink-0">
+                              Edit
+                            </button>
+                          )}
+                        </div>
                         <div className="text-xs text-gray-500 truncate">{o.accountName || '—'}</div>
                         <div className="flex items-center justify-between mt-2 text-xs">
                           <span className="font-semibold text-gray-900">{fmtINR(o.amount)}</span>
@@ -193,8 +179,8 @@ export default function OpportunitiesPage() {
               <thead className="bg-[#f3f3f3] text-xs uppercase text-gray-600">
                 <tr>
                   <th className="text-left px-4 py-2.5">Name</th>
-                  <th className="text-left px-4 py-2.5">Account</th>
-                  <th className="text-left px-4 py-2.5">Stage</th>
+                  <th className="text-left px-4 py-2.5">Company</th>
+                  <th className="text-left px-4 py-2.5">Deal Stage</th>
                   <th className="text-right px-4 py-2.5">Amount</th>
                   <th className="text-right px-4 py-2.5">Prob</th>
                   <th className="text-left px-4 py-2.5">Close Date</th>
@@ -206,9 +192,13 @@ export default function OpportunitiesPage() {
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Loading…</td>
                   </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-red-600">{loadError}</td>
+                  </tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">No opportunities yet.</td>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">No deals yet.</td>
                   </tr>
                 ) : (
                   items.map((o) => (
@@ -219,6 +209,7 @@ export default function OpportunitiesPage() {
                         <select
                           value={o.stage}
                           onChange={(e) => moveStage(o._id, e.target.value)}
+                          disabled={!canEdit}
                           className="text-xs border border-gray-300 rounded px-1 py-0.5 bg-white"
                         >
                           {STAGES.map((s) => (
@@ -231,10 +222,17 @@ export default function OpportunitiesPage() {
                       <td className="px-4 py-2.5 text-gray-600">
                         {new Date(o.closeDate).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-2.5 text-right">
-                        <button onClick={() => remove(o._id)} className="text-xs text-red-600 hover:underline">
-                          Delete
-                        </button>
+                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                        {canEdit && (
+                          <button onClick={() => setEditing(o)} className="text-xs text-[#0176d3] hover:underline mr-3">
+                            Edit
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => remove(o._id)} className="text-xs text-red-600 hover:underline">
+                            Delete
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -245,61 +243,19 @@ export default function OpportunitiesPage() {
         </div>
       )}
 
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title="New Opportunity"
-        footer={
-          <>
-            <button onClick={() => setOpen(false)} className="px-3 py-1.5 text-sm border border-gray-300 rounded">
-              Cancel
-            </button>
-            <button onClick={save} className="px-3 py-1.5 text-sm bg-[#0176d3] text-white rounded">
-              Save
-            </button>
-          </>
-        }
-      >
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Opportunity Name" required>
-            <TextInput value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </Field>
-          <Field label="Account">
-            <SelectInput value={form.accountId || ''} onChange={(e) => setForm({ ...form, accountId: e.target.value })}>
-              <option value="">— None —</option>
-              {accounts.map((a) => (
-                <option key={a._id} value={a._id}>
-                  {a.name}
-                </option>
-              ))}
-            </SelectInput>
-          </Field>
-          <Field label="Amount (₹)" required>
-            <TextInput
-              type="number"
-              value={form.amount || ''}
-              onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
-            />
-          </Field>
-          <Field label="Stage">
-            <SelectInput value={form.stage} onChange={(e) => setForm({ ...form, stage: e.target.value })}>
-              {STAGES.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </SelectInput>
-          </Field>
-          <Field label="Close Date" required>
-            <TextInput
-              type="date"
-              value={form.closeDate || ''}
-              onChange={(e) => setForm({ ...form, closeDate: e.target.value })}
-            />
-          </Field>
-          <Field label="Next Step">
-            <TextInput value={form.nextStep || ''} onChange={(e) => setForm({ ...form, nextStep: e.target.value })} />
-          </Field>
-        </div>
-      </Modal>
+      <ThemeScope theme={MODULE_THEMES['sales-service']}>
+        <RecordFormModal
+          object="Opportunity"
+          open={editing !== null}
+          record={editing && editing !== 'new' ? editing : undefined}
+          submit={moduleSubmit(API, editing && editing !== 'new' ? editing._id : undefined)}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            reload();
+          }}
+        />
+      </ThemeScope>
     </>
   );
 }

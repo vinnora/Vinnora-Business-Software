@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '../_components/PageHeader';
-import { Modal, Field, TextInput, TextArea, SelectInput } from '../_components/Modal';
+import { ActionErrorBanner, useActionError } from '../_components/ActionError';
+import { RecordFormModal, moduleSubmit, useDescribe } from '@/components/platform/RecordForm';
+import { ThemeScope, api, useLoad } from '@/components/platform/ui';
+import { MODULE_THEMES } from '@/components/platform/themes';
 
 type Account = {
   _id: string;
@@ -19,51 +22,39 @@ type Account = {
   ownerName?: string;
 };
 
-const TYPES = ['Customer', 'Prospect', 'Partner', 'Vendor', 'Other'];
+const API = '/api/sales-service/accounts';
 
 export default function AccountsPage() {
-  const [items, setItems] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<Partial<Account>>({ type: 'Prospect' });
+  const [query, setQuery] = useState('');
+  const [editing, setEditing] = useState<Account | 'new' | null>(null);
+  const actionError = useActionError();
+  const access = useDescribe('Account').data?.access;
+  const canCreate = access?.create ?? true;
+  const canEdit = access?.edit ?? true;
+  const canDelete = access?.delete ?? true;
 
-  const load = async () => {
-    setLoading(true);
-    const url = search
-      ? `/api/sales-service/accounts?search=${encodeURIComponent(search)}`
-      : '/api/sales-service/accounts';
-    const data = await fetch(url).then((r) => r.json());
-    setItems(Array.isArray(data) ? data : []);
-    setLoading(false);
-  };
+  const { data, error: loadError, loading, reload } = useLoad(
+    () => api<Account[]>(query ? `${API}?search=${encodeURIComponent(query)}` : API),
+    [query],
+  );
+  const items = Array.isArray(data) ? data : [];
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  const save = async () => {
-    if (!form.name) return;
-    await fetch('/api/sales-service/accounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
-    setOpen(false);
-    setForm({ type: 'Prospect' });
-    load();
+  const applySearch = () => {
+    if (search === query) reload();
+    else setQuery(search);
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this account?')) return;
-    await fetch(`/api/sales-service/accounts?id=${id}`, { method: 'DELETE' });
-    load();
+    if (!confirm('Delete this company?')) return;
+    await actionError.run(() => api(`${API}?id=${id}`, { method: 'DELETE' }));
+    reload();
   };
 
   return (
     <>
       <PageHeader
-        title="Accounts"
+        title="Companies"
         subtitle="Sales"
         count={items.length}
         actions={
@@ -71,19 +62,23 @@ export default function AccountsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && load()}
-              placeholder="Search accounts…"
+              onKeyDown={(e) => e.key === 'Enter' && applySearch()}
+              placeholder="Search companies…"
               className="px-3 py-1.5 text-sm border border-gray-300 rounded focus:border-[#0176d3] focus:outline-none"
             />
-            <button
-              onClick={() => setOpen(true)}
-              className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
-            >
-              + New
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => setEditing('new')}
+                className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
+              >
+                + New
+              </button>
+            )}
           </>
         }
       />
+
+      <ActionErrorBanner error={actionError.error} onDismiss={() => actionError.setError(null)} />
 
       <div className="p-6">
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -106,10 +101,20 @@ export default function AccountsPage() {
                     Loading…
                   </td>
                 </tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-red-600">{loadError}</td>
+                </tr>
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                    No accounts yet. Click <strong>+ New</strong> to add one.
+                    No companies yet.
+                    {canCreate && (
+                      <>
+                        {' '}
+                        Click <strong>+ New</strong> to add one.
+                      </>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -131,13 +136,20 @@ export default function AccountsPage() {
                     <td className="px-4 py-2.5 text-right text-gray-600">
                       {a.annualRevenue ? `₹${a.annualRevenue.toLocaleString('en-IN')}` : '—'}
                     </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <button
-                        onClick={() => remove(a._id)}
-                        className="text-xs text-red-600 hover:underline"
-                      >
-                        Delete
-                      </button>
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      {canEdit && (
+                        <button onClick={() => setEditing(a)} className="text-xs text-[#0176d3] hover:underline mr-3">
+                          Edit
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={() => remove(a._id)}
+                          className="text-xs text-red-600 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -147,56 +159,19 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title="New Account"
-        footer={
-          <>
-            <button onClick={() => setOpen(false)} className="px-3 py-1.5 text-sm border border-gray-300 rounded">
-              Cancel
-            </button>
-            <button onClick={save} className="px-3 py-1.5 text-sm bg-[#0176d3] text-white rounded">
-              Save
-            </button>
-          </>
-        }
-      >
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Account Name" required>
-            <TextInput value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </Field>
-          <Field label="Type">
-            <SelectInput value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-              {TYPES.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </SelectInput>
-          </Field>
-          <Field label="Industry">
-            <TextInput value={form.industry || ''} onChange={(e) => setForm({ ...form, industry: e.target.value })} />
-          </Field>
-          <Field label="Website">
-            <TextInput value={form.website || ''} onChange={(e) => setForm({ ...form, website: e.target.value })} />
-          </Field>
-          <Field label="Phone">
-            <TextInput value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          </Field>
-          <Field label="Annual Revenue (₹)">
-            <TextInput
-              type="number"
-              value={form.annualRevenue || ''}
-              onChange={(e) => setForm({ ...form, annualRevenue: Number(e.target.value) })}
-            />
-          </Field>
-          <Field label="City">
-            <TextInput value={form.billingCity || ''} onChange={(e) => setForm({ ...form, billingCity: e.target.value })} />
-          </Field>
-          <Field label="Country">
-            <TextInput value={form.billingCountry || ''} onChange={(e) => setForm({ ...form, billingCountry: e.target.value })} />
-          </Field>
-        </div>
-      </Modal>
+      <ThemeScope theme={MODULE_THEMES['sales-service']}>
+        <RecordFormModal
+          object="Account"
+          open={editing !== null}
+          record={editing && editing !== 'new' ? editing : undefined}
+          submit={moduleSubmit(API, editing && editing !== 'new' ? editing._id : undefined)}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            reload();
+          }}
+        />
+      </ThemeScope>
     </>
   );
 }

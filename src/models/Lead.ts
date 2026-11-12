@@ -36,6 +36,7 @@ export interface ILead extends Document {
   convertedContactId?: string;
   convertedOpportunityId?: string;
   tags?: string[];
+  custom?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,6 +74,8 @@ const LeadSchema = new Schema<ILead>(
     convertedContactId: { type: String },
     convertedOpportunityId: { type: String },
     tags: [{ type: String }],
+    // Values of custom fields defined in Setup → Object Manager, keyed by api name.
+    custom: { type: Schema.Types.Mixed, default: undefined },
   },
   { timestamps: true }
 );

@@ -13,12 +13,14 @@ import {
   Badge,
 } from '../_components/ui';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
+import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
+import { APP_LABELS } from '@/lib/platform/types';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-type Tab = 'departments' | 'leave' | 'attendance' | 'payroll' | 'workflows' | 'integrations' | 'connections' | 'subscription';
+type Tab = 'departments' | 'leave' | 'attendance' | 'payroll' | 'workflows' | 'integrations' | 'connections' | 'objects' | 'access' | 'subscription';
 
 type Department = {
   _id: string;
@@ -75,6 +77,8 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'workflows', label: 'Workflows', desc: 'Automate HR events' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
+  { id: 'objects', label: 'Data Model', desc: 'Modules, fields, rules & layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Roles & access packs' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
@@ -93,7 +97,7 @@ export default function HrmSetupPage() {
 
   return (
     <>
-      <PageHeader title="Setup" subtitle="HRM" />
+      <PageHeader title="Settings" subtitle="HRM" />
       <div className="flex">
         <aside className="w-64 bg-white border-r border-[#E8D5B7] min-h-[calc(100vh-7rem)]">
           <div className="p-3 text-xs uppercase tracking-wide text-[#8B6F47] font-semibold">
@@ -122,6 +126,8 @@ export default function HrmSetupPage() {
           {tab === 'workflows' && <WorkflowsTab />}
           {tab === 'integrations' && <IntegrationsTab />}
           {tab === 'connections' && <ConnectionsTab />}
+          {tab === 'objects' && <ModuleObjectManager app="hrm" />}
+          {tab === 'access' && <ModuleAccessLink app="hrm" />}
           {tab === 'subscription' && <SubscriptionPlan accentColor="#8B6F47" accentBg="#FAF1E1" textColor="#2C2620" mutedColor="#8B6F47" borderColor="#E8D5B7" />}
         </div>
       </div>
@@ -414,7 +420,7 @@ function WorkflowsTab() {
           <thead className="bg-[#FAF1E1] text-xs uppercase text-[#8B6F47]">
             <tr>
               <th className="text-left px-4 py-2.5">Name</th>
-              <th className="text-left px-4 py-2.5">Object</th>
+              <th className="text-left px-4 py-2.5">Module</th>
               <th className="text-left px-4 py-2.5">Trigger</th>
               <th className="text-center px-4 py-2.5">Active</th>
               <th className="text-left px-4 py-2.5">Default</th>
@@ -461,7 +467,7 @@ function WorkflowsTab() {
         <Field label="Name" required>
           <TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </Field>
-        <Field label="Object Type">
+        <Field label="Module">
           <SelectInput value={form.objectType} onChange={(e) => setForm({ ...form, objectType: e.target.value })}>
             {WF_OBJECT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </SelectInput>
@@ -660,14 +666,14 @@ function ConnectionsTab() {
               <tr key={c._id} className="border-t border-[#F2E4CF] hover:bg-[#FAF1E1]">
                 <td className="px-4 py-2 font-medium text-[#2C2620]">{c.name}</td>
                 <td className="px-4 py-2 text-[#6B5841]">
-                  <span className="text-xs font-semibold uppercase text-[#8B6F47]">{c.sourceApp}</span>
+                  <span className="text-xs font-semibold uppercase text-[#8B6F47]">{(APP_LABELS as Record<string, string>)[c.sourceApp] ?? c.sourceApp}</span>
                   <span className="text-[#C4A97D] mx-1">&rarr;</span>
                   <span>{c.sourceObject}</span>
                   <span className="text-[#C4A97D] mx-1">&middot;</span>
                   <span className="text-xs text-[#8B6F47]">{c.sourceEvent}</span>
                 </td>
                 <td className="px-4 py-2 text-[#6B5841]">
-                  <span className="text-xs font-semibold uppercase text-[#8B6F47]">{c.targetApp}</span>
+                  <span className="text-xs font-semibold uppercase text-[#8B6F47]">{(APP_LABELS as Record<string, string>)[c.targetApp] ?? c.targetApp}</span>
                   <span className="text-[#C4A97D] mx-1">&rarr;</span>
                   <span>{c.targetAction}</span>
                 </td>

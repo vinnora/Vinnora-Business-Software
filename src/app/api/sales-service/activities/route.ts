@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(activity, { status: 201 });
   } catch (error) {
     console.error('Error creating activity:', error);
-    return NextResponse.json({ error: 'Failed to create activity' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create follow-up' }, { status: 500 });
   }
 }
 
@@ -67,7 +67,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(activity);
   } catch (error) {
     console.error('Error updating activity:', error);
-    return NextResponse.json({ error: 'Failed to update activity' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update follow-up' }, { status: 500 });
   }
 }
 
@@ -81,6 +81,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting activity:', error);
-    return NextResponse.json({ error: 'Failed to delete activity' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete follow-up' }, { status: 500 });
   }
 }

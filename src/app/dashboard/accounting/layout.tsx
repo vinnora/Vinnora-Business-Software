@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { CustomObjectNav } from '@/components/platform/CustomObjectNav';
 import type { ReactNode } from 'react';
 import { AccountingIcon } from '@/components/ModuleIcon';
+import QuickStart from '@/components/QuickStart';
+import { QUICK_START } from '@/lib/quick-start-steps';
 
 const NAV = [
   { href: '/dashboard/accounting', label: 'Home', icon: 'home' },
@@ -83,6 +86,7 @@ export default function AccountingLayout({ children }: { children: ReactNode }) 
               <span>{item.label}</span>
             </Link>
           ))}
+          <CustomObjectNav app="accounting" basePath="/dashboard/accounting" />
         </nav>
         {/* Decorative leaf canopy silhouette at bottom of sidebar */}
         <svg
@@ -125,6 +129,13 @@ export default function AccountingLayout({ children }: { children: ReactNode }) 
 
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+      <QuickStart
+        moduleKey="accounting"
+        moduleName={QUICK_START.accounting.name}
+        steps={QUICK_START.accounting.steps}
+        accentFrom={QUICK_START.accounting.accentFrom}
+        accentTo={QUICK_START.accounting.accentTo}
+      />
     </div>
   );
 }

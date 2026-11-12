@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(lead, { status: 201 });
   } catch (error: any) {
     console.error('Error creating marketing lead:', error);
-    return NextResponse.json({ error: error.message || 'Failed to create lead' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to create enquiry' }, { status: 500 });
   }
 }
 

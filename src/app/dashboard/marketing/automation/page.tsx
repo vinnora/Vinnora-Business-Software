@@ -8,7 +8,7 @@ type Automation = { _id: string; name: string; description?: string; active: boo
 
 const TRIGGERS = ['formSubmission', 'leadCreated', 'leadScoreReached', 'emailOpened', 'emailClicked', 'eventRegistered', 'tagAdded', 'manual'];
 const STEP_TYPES = ['sendEmail', 'sendSms', 'wait', 'condition', 'updateLead', 'addTag', 'notifyOwner', 'pushToSales'];
-const TRIGGER_LABELS: Record<string, string> = { formSubmission: 'Form Submission', leadCreated: 'Lead Created', leadScoreReached: 'Score Reached', emailOpened: 'Email Opened', emailClicked: 'Email Clicked', eventRegistered: 'Event Registration', tagAdded: 'Tag Added', manual: 'Manual' };
+const TRIGGER_LABELS: Record<string, string> = { formSubmission: 'Form Submission', leadCreated: 'Enquiry Created', leadScoreReached: 'Score Reached', emailOpened: 'Email Opened', emailClicked: 'Email Clicked', eventRegistered: 'Event Registration', tagAdded: 'Tag Added', manual: 'Manual' };
 
 export default function AutomationPage() {
   const [items, setItems] = useState<Automation[]>([]);
@@ -136,7 +136,7 @@ export default function AutomationPage() {
             <SelectInput value={s.type} onChange={e => updateStep(i, { type: e.target.value })} style={{ width: 160 }}>
               {STEP_TYPES.map(t => <option key={t}>{t}</option>)}
             </SelectInput>
-            <div className="flex-1 text-xs text-[#94A8B8]">{s.type === 'wait' ? 'Delay before next step' : s.type === 'sendEmail' ? 'Send an email' : s.type === 'sendSms' ? 'Send SMS' : s.type === 'condition' ? 'Branch on condition' : s.type === 'addTag' ? 'Add tag to lead' : s.type === 'pushToSales' ? 'Convert to Sales lead' : s.type}</div>
+            <div className="flex-1 text-xs text-[#94A8B8]">{s.type === 'wait' ? 'Delay before next step' : s.type === 'sendEmail' ? 'Send an email' : s.type === 'sendSms' ? 'Send SMS' : s.type === 'condition' ? 'Branch on condition' : s.type === 'addTag' ? 'Add tag to enquiry' : s.type === 'pushToSales' ? 'Convert to Sell & Support enquiry' : s.type}</div>
             <button type="button" onClick={() => removeStep(i)} className="text-red-600 text-xs">×</button>
           </div>
         ))}

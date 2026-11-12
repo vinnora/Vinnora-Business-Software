@@ -27,7 +27,7 @@ export default function AcceptInvitePage() {
         const data = await res.json();
         if (res.ok) {
           setStatus('success');
-          setMessage('You have successfully joined the organization!');
+          setMessage('You have successfully joined the workspace!');
         } else if (data.needsSignup) {
           setStatus('needs-signup');
           setEmail(data.email || '');

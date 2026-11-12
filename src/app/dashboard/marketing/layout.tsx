@@ -1,22 +1,25 @@
 import Link from 'next/link';
+import { CustomObjectNav } from '@/components/platform/CustomObjectNav';
 import type { ReactNode } from 'react';
 import { MarketingIcon } from '@/components/ModuleIcon';
+import QuickStart from '@/components/QuickStart';
+import { QUICK_START } from '@/lib/quick-start-steps';
 
 const NAV = [
-  { href: '/dashboard/marketing', label: 'Home', icon: 'home' },
-  { href: '/dashboard/marketing/campaigns', label: 'Campaigns', icon: 'megaphone' },
+  { href: '/dashboard/marketing', label: 'Today', icon: 'home' },
+  { href: '/dashboard/marketing/campaigns', label: 'Promotions', icon: 'megaphone' },
   { href: '/dashboard/marketing/email', label: 'Email', icon: 'mail' },
   { href: '/dashboard/marketing/sms', label: 'SMS', icon: 'phone' },
   { href: '/dashboard/marketing/social', label: 'Social Media', icon: 'share' },
-  { href: '/dashboard/marketing/leads', label: 'Leads', icon: 'magnet' },
+  { href: '/dashboard/marketing/leads', label: 'Enquiries', icon: 'magnet' },
   { href: '/dashboard/marketing/events', label: 'Events', icon: 'calendar' },
   { href: '/dashboard/marketing/surveys', label: 'Surveys', icon: 'clipboard' },
   { href: '/dashboard/marketing/automation', label: 'Automation', icon: 'zap' },
   { href: '/dashboard/marketing/content', label: 'Content', icon: 'folder' },
   { href: '/dashboard/marketing/analytics', label: 'Analytics', icon: 'chart' },
   { href: '/dashboard/marketing/calendar', label: 'Calendar', icon: 'grid' },
-  { href: '/dashboard/marketing/tasks', label: 'Tasks', icon: 'check' },
-  { href: '/dashboard/marketing/setup', label: 'Setup', icon: 'gear' },
+  { href: '/dashboard/marketing/tasks', label: 'To-dos', icon: 'check' },
+  { href: '/dashboard/marketing/setup', label: 'Settings', icon: 'gear' },
 ];
 
 function Icon({ name, className = 'h-5 w-5' }: { name: string; className?: string }) {
@@ -86,6 +89,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
               <span>{item.label}</span>
             </Link>
           ))}
+          <CustomObjectNav app="marketing" basePath="/dashboard/marketing" />
         </nav>
         {/* Decorative lavender glow */}
         <div
@@ -107,7 +111,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Search campaigns, leads, content..."
+              placeholder="Search promotions, enquiries, content..."
               className="w-full max-w-md px-4 py-1.5 text-sm bg-[#F4F9FB] border border-transparent rounded focus:bg-white focus:border-[#5A7A8C] focus:outline-none"
             />
           </div>
@@ -125,6 +129,13 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
 
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+      <QuickStart
+        moduleKey="marketing"
+        moduleName={QUICK_START.marketing.name}
+        steps={QUICK_START.marketing.steps}
+        accentFrom={QUICK_START.marketing.accentFrom}
+        accentTo={QUICK_START.marketing.accentTo}
+      />
     </div>
   );
 }

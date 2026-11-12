@@ -1,5 +1,8 @@
 import { getServerSession } from 'next-auth/next';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import mongoose from 'mongoose';
+import Sandbox from '@/models/Sandbox';
 import { authOptions } from './auth';
 import dbConnect from './mongodb';
 import User from '@/models/User';
@@ -16,6 +19,13 @@ const ROLE_LEVEL: Record<OrgRole, number> = {
   owner: 4,
 };
 
+export interface SandboxEnv {
+  id: string;
+  name: string;
+  tenant: string;
+  type: string;
+}
+
 export interface AuthContext {
   userId: string;
   orgId: string;
@@ -23,6 +33,28 @@ export interface AuthContext {
   appRole: OrgRole;
   org: any;
   user: any;
+  /** Set when the user has switched into a sandbox environment. */
+  sandbox?: SandboxEnv;
+}
+
+export const ENV_COOKIE = 'vinnora-env';
+
+/** Resolve the sandbox selected by the environment cookie, if the user may use it. */
+async function resolveSandbox(orgId: string, userId: string, orgRole: OrgRole): Promise<SandboxEnv | undefined> {
+  if (!orgId) return undefined;
+  let sandboxId: string | undefined;
+  try {
+    sandboxId = (await cookies()).get(ENV_COOKIE)?.value;
+  } catch {
+    return undefined; // not in a request scope
+  }
+  if (!sandboxId || !mongoose.isValidObjectId(sandboxId)) return undefined;
+  const sbx = await Sandbox.findOne({ _id: sandboxId, orgId, status: 'ready' }).lean();
+  if (!sbx) return undefined;
+  const allowed =
+    orgRole === 'owner' || orgRole === 'admin' || sbx.createdBy === userId || (sbx.userIds || []).includes(userId);
+  if (!allowed) return undefined;
+  return { id: String(sbx._id), name: sbx.name, tenant: sbx.tenant, type: sbx.type };
 }
 
 /**
@@ -43,6 +75,7 @@ export async function getAuthContext(app?: AppKey): Promise<AuthContext> {
       appRole: 'owner',
       org: { plan: 'all-in-one', apps: ['sales-service', 'accounting', 'inventory', 'marketing', 'hrm', 'manufacturing'], maxSeats: 100 },
       user: { _id: 'dev-user-id', email: 'dev@vinnora.com', orgRole: 'owner' },
+      sandbox: await resolveSandbox('dev-org-id', 'dev-user-id', 'owner'),
     };
   }
 
@@ -65,7 +98,7 @@ export async function getAuthContext(app?: AppKey): Promise<AuthContext> {
 
   const org = await Organization.findById(user.orgId);
   if (!org) {
-    throw new Error('Organization not found');
+    throw new Error('Workspace not found');
   }
 
   const orgRole = (user.orgRole || 'member') as OrgRole;
@@ -86,6 +119,7 @@ export async function getAuthContext(app?: AppKey): Promise<AuthContext> {
     appRole,
     org,
     user,
+    sandbox: await resolveSandbox(org._id.toString(), user._id.toString(), orgRole),
   };
 }
 

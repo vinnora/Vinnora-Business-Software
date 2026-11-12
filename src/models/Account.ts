@@ -19,6 +19,7 @@ export interface IAccount extends Document {
   ownerName?: string;
   description?: string;
   tags?: string[];
+  custom?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +48,8 @@ const AccountSchema = new Schema<IAccount>(
     ownerName: { type: String },
     description: { type: String },
     tags: [{ type: String }],
+    // Values of custom fields defined in Setup → Object Manager, keyed by api name.
+    custom: { type: Schema.Types.Mixed, default: undefined },
   },
   { timestamps: true }
 );

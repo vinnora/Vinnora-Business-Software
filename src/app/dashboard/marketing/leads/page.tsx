@@ -127,7 +127,7 @@ export default function MktLeadsPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this lead?')) return;
+    if (!confirm('Delete this enquiry?')) return;
     await fetch(`/api/marketing/leads?id=${id}`, { method: 'DELETE' });
     load();
   };
@@ -141,7 +141,7 @@ export default function MktLeadsPage() {
   return (
     <>
       <PageHeader
-        title="Leads"
+        title="Enquiries"
         subtitle="Marketing"
         count={items.length}
         actions={
@@ -165,7 +165,7 @@ export default function MktLeadsPage() {
                 <option key={s}>{s}</option>
               ))}
             </SelectInput>
-            <PrimaryButton onClick={startCreate}>+ New Lead</PrimaryButton>
+            <PrimaryButton onClick={startCreate}>+ New Enquiry</PrimaryButton>
           </>
         }
       />
@@ -195,7 +195,7 @@ export default function MktLeadsPage() {
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-[#94A8B8]">
-                    No leads yet.
+                    No enquiries yet.
                   </td>
                 </tr>
               ) : (
@@ -245,7 +245,7 @@ export default function MktLeadsPage() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title={editing ? 'Edit Lead' : 'New Lead'}
+        title={editing ? 'Edit Enquiry' : 'New Enquiry'}
         width="max-w-2xl"
         footer={
           <>
@@ -303,7 +303,7 @@ export default function MktLeadsPage() {
               placeholder="e.g. Homepage form"
             />
           </Field>
-          <Field label="Campaign">
+          <Field label="Promotion">
             <SelectInput
               value={form.campaignId}
               onChange={(e) => setForm({ ...form, campaignId: e.target.value })}

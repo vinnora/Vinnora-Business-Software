@@ -13,12 +13,13 @@ import {
   Badge,
 } from '../_components/ui';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
+import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-type Tab = 'general' | 'email' | 'sms' | 'segments' | 'automations' | 'integrations' | 'connections' | 'subscription';
+type Tab = 'general' | 'email' | 'sms' | 'segments' | 'automations' | 'integrations' | 'connections' | 'objects' | 'access' | 'subscription';
 
 type Segment = {
   _id: string;
@@ -74,6 +75,8 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'automations', label: 'Automations', desc: 'Marketing automation rules' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
+  { id: 'objects', label: 'Data Model', desc: 'Modules, fields, rules & form layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Roles & access packs' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
@@ -88,7 +91,7 @@ export default function MarketingSetupPage() {
 
   return (
     <>
-      <PageHeader title="Setup" subtitle="Marketing" />
+      <PageHeader title="Settings" subtitle="Marketing" />
       <div className="flex">
         <aside className="w-64 bg-white border-r border-[#D6E5EC] min-h-[calc(100vh-7rem)]">
           <div className="p-3 text-xs uppercase tracking-wide text-[#94A8B8] font-semibold">
@@ -117,6 +120,8 @@ export default function MarketingSetupPage() {
           {tab === 'automations' && <AutomationsTab />}
           {tab === 'integrations' && <IntegrationsTab />}
           {tab === 'connections' && <ConnectionsTab />}
+          {tab === 'objects' && <ModuleObjectManager app="marketing" />}
+          {tab === 'access' && <ModuleAccessLink app="marketing" />}
           {tab === 'subscription' && <SubscriptionPlan accentColor="#5A7A8C" accentBg="#F4F9FB" textColor="#3D5266" mutedColor="#94A8B8" borderColor="#D6E5EC" />}
         </div>
       </div>
