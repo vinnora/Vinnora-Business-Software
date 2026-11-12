@@ -13,12 +13,13 @@ import {
   Badge,
 } from '../_components/ui';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
+import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-type Tab = 'general' | 'workflows' | 'integrations' | 'connections' | 'subscription';
+type Tab = 'general' | 'workflows' | 'integrations' | 'connections' | 'objects' | 'access' | 'subscription';
 
 type WorkflowRule = {
   _id: string;
@@ -62,6 +63,8 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'workflows', label: 'Workflows', desc: 'Automate accounting events' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
+  { id: 'objects', label: 'Object Manager', desc: 'Objects, fields, rules & page layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Profiles & permission sets' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
@@ -111,6 +114,8 @@ export default function AccountingSetupPage() {
           {tab === 'workflows' && <WorkflowsTab />}
           {tab === 'integrations' && <IntegrationsTab />}
           {tab === 'connections' && <ConnectionsTab />}
+          {tab === 'objects' && <ModuleObjectManager app="accounting" />}
+          {tab === 'access' && <ModuleAccessLink app="accounting" />}
           {tab === 'subscription' && <SubscriptionPlan accentColor="#059669" accentBg="#ECFDF5" textColor="#1F2937" mutedColor="#6B7280" borderColor="#E5E7EB" />}
         </div>
       </div>

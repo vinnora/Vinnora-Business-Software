@@ -6,14 +6,17 @@ import {
   PrimaryButton, SecondaryButton, Badge,
 } from '../_components/ui';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
+import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
 
-type Tab = 'general' | 'workflows' | 'integrations' | 'connections' | 'subscription';
+type Tab = 'general' | 'workflows' | 'integrations' | 'connections' | 'objects' | 'access' | 'subscription';
 
 const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'general', label: 'General', desc: 'Production unit, shift & quality defaults' },
   { id: 'workflows', label: 'Workflows', desc: 'Automate manufacturing events' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
+  { id: 'objects', label: 'Object Manager', desc: 'Objects, fields, rules & page layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Profiles & permission sets' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
@@ -48,6 +51,8 @@ export default function ManufacturingSetupPage() {
           {tab === 'workflows' && <WorkflowsTab />}
           {tab === 'integrations' && <IntegrationsTab />}
           {tab === 'connections' && <ConnectionsTab />}
+          {tab === 'objects' && <ModuleObjectManager app="manufacturing" />}
+          {tab === 'access' && <ModuleAccessLink app="manufacturing" />}
           {tab === 'subscription' && <SubscriptionPlan accentColor="#4A4E54" accentBg="#F3F4F6" textColor="#1C1C1E" mutedColor="#6B7280" borderColor="#E5E7EB" />}
         </div>
       </div>

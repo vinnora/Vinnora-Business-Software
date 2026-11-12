@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { CustomObjectNav } from '@/components/platform/CustomObjectNav';
 import type { ReactNode } from 'react';
 import { SalesServiceIcon } from '@/components/ModuleIcon';
+import QuickStart from '@/components/QuickStart';
+import { QUICK_START } from '@/lib/quick-start-steps';
 
 const NAV = [
   { href: '/dashboard/sales-service', label: 'Home', icon: 'home' },
@@ -119,6 +122,7 @@ export default function SalesServiceLayout({ children }: { children: ReactNode }
               <span>{item.label}</span>
             </Link>
           ))}
+          <CustomObjectNav app="sales-service" basePath="/dashboard/sales-service" />
         </nav>
         {/* Decorative wave at bottom of sidebar */}
         <svg
@@ -166,6 +170,13 @@ export default function SalesServiceLayout({ children }: { children: ReactNode }
         {/* Content */}
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+      <QuickStart
+        moduleKey="sales-service"
+        moduleName={QUICK_START['sales-service'].name}
+        steps={QUICK_START['sales-service'].steps}
+        accentFrom={QUICK_START['sales-service'].accentFrom}
+        accentTo={QUICK_START['sales-service'].accentTo}
+      />
     </div>
   );
 }

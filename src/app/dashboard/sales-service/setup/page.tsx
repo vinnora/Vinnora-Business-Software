@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 import { PageHeader } from '../_components/PageHeader';
 import { Modal, Field, TextInput, TextArea, SelectInput } from '../_components/Modal';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
+import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
 
 type Tab =
   | 'picklists'
-  | 'fields'
   | 'workflows'
   | 'templates'
   | 'slas'
@@ -15,11 +15,10 @@ type Tab =
   | 'channels'
   | 'integrations'
   | 'connections'
-  | 'subscription';
+  | 'objects' | 'access' | 'subscription';
 
 const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'picklists', label: 'Picklists', desc: 'Customize stages, statuses, sources, types' },
-  { id: 'fields', label: 'Custom Fields', desc: 'Add fields to any object' },
   { id: 'workflows', label: 'Workflows & Automation', desc: 'Rules that fire on record events' },
   { id: 'templates', label: 'Email Templates', desc: 'Reusable templates with merge fields' },
   { id: 'slas', label: 'SLAs', desc: 'Service level agreements for cases' },
@@ -27,6 +26,8 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'channels', label: 'Channels', desc: 'Inbound channels & web-to-case' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
+  { id: 'objects', label: 'Object Manager', desc: 'Objects, fields, rules & page layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Profiles & permission sets' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
@@ -57,7 +58,6 @@ export default function SetupPage() {
         </aside>
         <div className="flex-1 p-6">
           {tab === 'picklists' && <PicklistsTab />}
-          {tab === 'fields' && <FieldsTab />}
           {tab === 'workflows' && <WorkflowsTab />}
           {tab === 'templates' && <TemplatesTab />}
           {tab === 'slas' && <SlasTab />}
@@ -65,6 +65,8 @@ export default function SetupPage() {
           {tab === 'channels' && <ChannelsTab />}
           {tab === 'integrations' && <SalesIntegrationsTab />}
           {tab === 'connections' && <SalesConnectionsTab />}
+          {tab === 'objects' && <ModuleObjectManager app="sales-service" />}
+          {tab === 'access' && <ModuleAccessLink app="sales-service" />}
           {tab === 'subscription' && <SubscriptionPlan accentColor="#0176d3" accentBg="#E0F4F8" textColor="#012A4A" mutedColor="#6B7280" borderColor="#E5E7EB" />}
         </div>
       </div>
@@ -221,148 +223,6 @@ function PicklistsTab() {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-/* -------------------- Custom Fields -------------------- */
-
-const FIELD_OBJECTS = ['Lead', 'Contact', 'Account', 'Opportunity', 'Case', 'WorkOrder'];
-const FIELD_TYPES = ['text', 'number', 'date', 'boolean', 'picklist', 'multipicklist', 'url', 'email'];
-
-function FieldsTab() {
-  const [object, setObject] = useState('Lead');
-  const [fields, setFields] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<any>({ type: 'text' });
-
-  const load = async () => {
-    setLoading(true);
-    const data = await fetch(`/api/sales-service/custom-fields?objectType=${object}`).then((r) => r.json());
-    setFields(Array.isArray(data) ? data : []);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    load();
-  }, [object]);
-
-  const save = async () => {
-    if (!form.name || !form.type) return;
-    await fetch('/api/sales-service/custom-fields', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, objectType: object }),
-    });
-    setOpen(false);
-    setForm({ type: 'text' });
-    load();
-  };
-
-  const remove = async (id: string) => {
-    if (!confirm('Delete this field?')) return;
-    await fetch(`/api/sales-service/custom-fields?id=${id}`, { method: 'DELETE' });
-    load();
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-lg font-semibold">Custom Fields</h2>
-          <p className="text-sm text-gray-500">Add custom data points to any object.</p>
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={object}
-            onChange={(e) => setObject(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white"
-          >
-            {FIELD_OBJECTS.map((o) => (
-              <option key={o}>{o}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => setOpen(true)}
-            className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded"
-          >
-            + New Field
-          </button>
-        </div>
-      </div>
-      <div className="bg-white border border-gray-200 rounded overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs uppercase text-gray-600">
-            <tr>
-              <th className="text-left px-4 py-2">Label</th>
-              <th className="text-left px-4 py-2">API Name</th>
-              <th className="text-left px-4 py-2">Type</th>
-              <th className="text-left px-4 py-2">Required</th>
-              <th className="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">Loading…</td></tr>
-            ) : fields.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">No custom fields yet.</td></tr>
-            ) : (
-              fields.map((f) => (
-                <tr key={f._id} className="border-t border-gray-100">
-                  <td className="px-4 py-2 font-medium">{f.name}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-gray-500">{f.apiName}</td>
-                  <td className="px-4 py-2"><span className="text-xs px-2 py-0.5 rounded bg-gray-100">{f.type}</span></td>
-                  <td className="px-4 py-2">{f.required ? '✓' : '—'}</td>
-                  <td className="px-4 py-2 text-right">
-                    <button onClick={() => remove(f._id)} className="text-xs text-red-600">Delete</button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={`New Field on ${object}`}
-        footer={
-          <>
-            <button onClick={() => setOpen(false)} className="px-3 py-1.5 text-sm border border-gray-300 rounded">Cancel</button>
-            <button onClick={save} className="px-3 py-1.5 text-sm bg-[#0176d3] text-white rounded">Save</button>
-          </>
-        }
-      >
-        <Field label="Label" required>
-          <TextInput value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        </Field>
-        <Field label="Type" required>
-          <SelectInput value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-            {FIELD_TYPES.map((t) => <option key={t}>{t}</option>)}
-          </SelectInput>
-        </Field>
-        {(form.type === 'picklist' || form.type === 'multipicklist') && (
-          <Field label="Picklist values (comma-separated)">
-            <TextInput
-              value={(form.picklistValues || []).join(', ')}
-              onChange={(e) => setForm({ ...form, picklistValues: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
-            />
-          </Field>
-        )}
-        <Field label="Help text">
-          <TextInput value={form.helpText || ''} onChange={(e) => setForm({ ...form, helpText: e.target.value })} />
-        </Field>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={form.required || false}
-            onChange={(e) => setForm({ ...form, required: e.target.checked })}
-          />
-          Required field
-        </label>
-      </Modal>
     </div>
   );
 }

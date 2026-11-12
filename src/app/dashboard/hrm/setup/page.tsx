@@ -13,12 +13,13 @@ import {
   Badge,
 } from '../_components/ui';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
+import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-type Tab = 'departments' | 'leave' | 'attendance' | 'payroll' | 'workflows' | 'integrations' | 'connections' | 'subscription';
+type Tab = 'departments' | 'leave' | 'attendance' | 'payroll' | 'workflows' | 'integrations' | 'connections' | 'objects' | 'access' | 'subscription';
 
 type Department = {
   _id: string;
@@ -75,6 +76,8 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'workflows', label: 'Workflows', desc: 'Automate HR events' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
+  { id: 'objects', label: 'Object Manager', desc: 'Objects, fields, rules & page layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Profiles & permission sets' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
@@ -122,6 +125,8 @@ export default function HrmSetupPage() {
           {tab === 'workflows' && <WorkflowsTab />}
           {tab === 'integrations' && <IntegrationsTab />}
           {tab === 'connections' && <ConnectionsTab />}
+          {tab === 'objects' && <ModuleObjectManager app="hrm" />}
+          {tab === 'access' && <ModuleAccessLink app="hrm" />}
           {tab === 'subscription' && <SubscriptionPlan accentColor="#8B6F47" accentBg="#FAF1E1" textColor="#2C2620" mutedColor="#8B6F47" borderColor="#E8D5B7" />}
         </div>
       </div>

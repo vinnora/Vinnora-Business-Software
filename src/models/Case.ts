@@ -37,6 +37,7 @@ export interface ICase extends Document {
   escalated: boolean;
   comments: ICaseComment[];
   tags?: string[];
+  custom?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -90,6 +91,8 @@ const CaseSchema = new Schema<ICase>(
       },
     ],
     tags: [{ type: String }],
+    // Values of custom fields defined in Setup → Object Manager, keyed by api name.
+    custom: { type: Schema.Types.Mixed, default: undefined },
   },
   { timestamps: true }
 );

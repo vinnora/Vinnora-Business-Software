@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { CustomObjectNav } from '@/components/platform/CustomObjectNav';
 import type { ReactNode } from 'react';
 import { MarketingIcon } from '@/components/ModuleIcon';
+import QuickStart from '@/components/QuickStart';
+import { QUICK_START } from '@/lib/quick-start-steps';
 
 const NAV = [
   { href: '/dashboard/marketing', label: 'Home', icon: 'home' },
@@ -86,6 +89,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
               <span>{item.label}</span>
             </Link>
           ))}
+          <CustomObjectNav app="marketing" basePath="/dashboard/marketing" />
         </nav>
         {/* Decorative lavender glow */}
         <div
@@ -125,6 +129,13 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
 
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+      <QuickStart
+        moduleKey="marketing"
+        moduleName={QUICK_START.marketing.name}
+        steps={QUICK_START.marketing.steps}
+        accentFrom={QUICK_START.marketing.accentFrom}
+        accentTo={QUICK_START.marketing.accentTo}
+      />
     </div>
   );
 }

@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
+import mongoose from 'mongoose';
+import { getAuthContext } from '@/lib/auth-helpers';
+import { getObjectAccess, buildCreateDoc, buildUpdate } from '@/lib/platform/access';
+import { BadRequestError, NotFoundError, platformErrorResponse } from '@/lib/platform/errors';
 import Contact from '@/models/Contact';
 
 export async function GET(req: NextRequest) {
   try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Contact');
+    access.assert('read');
 
     const { searchParams } = new URL(req.url);
     const accountId = searchParams.get('accountId');
     const search = searchParams.get('search');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (accountId) filter.accountId = accountId;
     if (search) {
       filter.$or = [
@@ -24,60 +25,65 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const contacts = await Contact.find(filter).sort({ updatedAt: -1 }).limit(200);
-    return NextResponse.json(contacts);
+    const contacts = await Contact.find({ $and: [await access.readFilter(), filter] })
+      .sort({ updatedAt: -1 })
+      .limit(200);
+    return NextResponse.json(access.shapeMany(contacts));
   } catch (error) {
-    console.error('Error fetching contacts:', error);
-    return NextResponse.json([], { status: 200 });
+    return platformErrorResponse(error, 'Error fetching contacts:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
-
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Contact');
     const body = await req.json();
-    if (!body.firstName || !body.lastName) {
-      return NextResponse.json(
-        { error: 'firstName and lastName are required' },
-        { status: 400 }
-      );
-    }
 
-    const contact = await Contact.create({ ...body, userId });
-    return NextResponse.json(contact, { status: 201 });
+    const prepared = await access.prepareWrite(body, undefined, { passthrough: true });
+    const contact = await Contact.create(buildCreateDoc(access, prepared));
+    return NextResponse.json(access.shape(contact), { status: 201 });
   } catch (error) {
-    console.error('Error creating contact:', error);
-    return NextResponse.json({ error: 'Failed to create contact' }, { status: 500 });
+    return platformErrorResponse(error, 'Error creating contact:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
-    await dbConnect();
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Contact');
     const body = await req.json();
     const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const contact = await Contact.findByIdAndUpdate(_id, updates, { new: true });
-    return NextResponse.json(contact);
+    if (!_id) throw new BadRequestError('_id required');
+    if (!mongoose.isValidObjectId(_id)) throw new BadRequestError('Invalid _id');
+
+    const existing = await Contact.findOne({ $and: [{ _id }, await access.readFilter()] });
+    if (!existing) throw new NotFoundError('Contact not found');
+
+    const prepared = await access.prepareWrite(updates, existing, { passthrough: true });
+    const contact = await Contact.findByIdAndUpdate(_id, buildUpdate(access, prepared), { new: true });
+    return NextResponse.json(access.shape(contact));
   } catch (error) {
-    console.error('Error updating contact:', error);
-    return NextResponse.json({ error: 'Failed to update contact' }, { status: 500 });
+    return platformErrorResponse(error, 'Error updating contact:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
-    await dbConnect();
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Contact');
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await Contact.findByIdAndDelete(id);
+    if (!id) throw new BadRequestError('id required');
+    if (!mongoose.isValidObjectId(id)) throw new BadRequestError('Invalid id');
+
+    const existing = await Contact.findOne({ $and: [{ _id: id }, await access.readFilter()] });
+    if (!existing) throw new NotFoundError('Contact not found');
+    access.assert('delete');
+
+    await Contact.deleteOne({ _id: existing._id });
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting contact:', error);
-    return NextResponse.json({ error: 'Failed to delete contact' }, { status: 500 });
+    return platformErrorResponse(error, 'Error deleting contact:');
   }
 }

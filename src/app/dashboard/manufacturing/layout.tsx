@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { CustomObjectNav } from '@/components/platform/CustomObjectNav';
 import type { ReactNode } from 'react';
 import { ManufacturingIcon } from '@/components/ModuleIcon';
+import QuickStart from '@/components/QuickStart';
+import { QUICK_START } from '@/lib/quick-start-steps';
 
 const NAV = [
   { href: '/dashboard/manufacturing', label: 'Home', icon: 'home' },
@@ -71,6 +74,7 @@ export default function ManufacturingLayout({ children }: { children: ReactNode 
               <span>{item.label}</span>
             </Link>
           ))}
+          <CustomObjectNav app="manufacturing" basePath="/dashboard/manufacturing" />
         </nav>
         <div className="absolute bottom-12 left-0 right-0 h-16 opacity-40 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center bottom, rgba(212,168,67,0.5) 0%, transparent 70%)' }} />
         <div className="px-5 py-3 border-t border-white/10 text-xs text-white/60 relative">
@@ -92,6 +96,13 @@ export default function ManufacturingLayout({ children }: { children: ReactNode 
         </header>
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+      <QuickStart
+        moduleKey="manufacturing"
+        moduleName={QUICK_START.manufacturing.name}
+        steps={QUICK_START.manufacturing.steps}
+        accentFrom={QUICK_START.manufacturing.accentFrom}
+        accentTo={QUICK_START.manufacturing.accentTo}
+      />
     </div>
   );
 }

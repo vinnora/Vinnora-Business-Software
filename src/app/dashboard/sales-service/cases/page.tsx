@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { PageHeader } from '../_components/PageHeader';
-import { Modal, Field, TextInput, TextArea, SelectInput } from '../_components/Modal';
+import { ActionErrorBanner, useActionError } from '../_components/ActionError';
+import { RecordFormModal, moduleSubmit, useDescribe } from '@/components/platform/RecordForm';
+import { ThemeScope, api, useLoad } from '@/components/platform/ui';
+import { MODULE_THEMES } from '@/components/platform/themes';
 
 type Case = {
   _id: string;
@@ -20,10 +23,9 @@ type Case = {
   createdAt: string;
 };
 
+const API = '/api/sales-service/cases';
 const STATUSES = ['New', 'Working', 'Escalated', 'Pending Customer', 'Resolved', 'Closed'];
 const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
-const ORIGINS = ['Email', 'Phone', 'Web', 'Chat', 'Social', 'Portal'];
-const TYPES = ['Question', 'Problem', 'Feature Request', 'Incident'];
 
 const PRIORITY_COLORS: Record<string, string> = {
   Low: 'bg-gray-100 text-gray-700',
@@ -42,56 +44,32 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function CasesPage() {
-  const [items, setItems] = useState<Case[]>([]);
-  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<Partial<Case>>({
-    priority: 'Medium',
-    origin: 'Web',
-    status: 'New',
-  });
+  const [editing, setEditing] = useState<Case | 'new' | null>(null);
+  const actionError = useActionError();
+  const access = useDescribe('Case').data?.access;
+  const canCreate = access?.create ?? true;
+  const canEdit = access?.edit ?? true;
+  const canDelete = access?.delete ?? true;
 
-  const load = async () => {
-    setLoading(true);
+  const { data, error: loadError, loading, reload } = useLoad(() => {
     const params = new URLSearchParams();
     if (statusFilter) params.set('status', statusFilter);
     if (priorityFilter) params.set('priority', priorityFilter);
-    const data = await fetch(`/api/sales-service/cases?${params}`).then((r) => r.json());
-    setItems(Array.isArray(data) ? data : []);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    load();
+    return api<Case[]>(`${API}?${params}`);
   }, [statusFilter, priorityFilter]);
-
-  const save = async () => {
-    if (!form.subject) return;
-    await fetch('/api/sales-service/cases', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
-    setOpen(false);
-    setForm({ priority: 'Medium', origin: 'Web', status: 'New' });
-    load();
-  };
+  const items = Array.isArray(data) ? data : [];
 
   const updateStatus = async (id: string, status: string) => {
-    await fetch('/api/sales-service/cases', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ _id: id, status }),
-    });
-    load();
+    await actionError.run(() => api(API, { method: 'PATCH', body: { _id: id, status } }));
+    reload();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this case?')) return;
-    await fetch(`/api/sales-service/cases?id=${id}`, { method: 'DELETE' });
-    load();
+    await actionError.run(() => api(`${API}?id=${id}`, { method: 'DELETE' }));
+    reload();
   };
 
   const isBreached = (c: Case) =>
@@ -125,15 +103,19 @@ export default function CasesPage() {
                 <option key={s}>{s}</option>
               ))}
             </select>
-            <button
-              onClick={() => setOpen(true)}
-              className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
-            >
-              + New Case
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => setEditing('new')}
+                className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
+              >
+                + New Case
+              </button>
+            )}
           </>
         }
       />
+
+      <ActionErrorBanner error={actionError.error} onDismiss={() => actionError.setError(null)} />
 
       <div className="p-6">
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -155,6 +137,10 @@ export default function CasesPage() {
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-500">Loading…</td>
                 </tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-red-600">{loadError}</td>
+                </tr>
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-500">No cases yet.</td>
@@ -174,6 +160,7 @@ export default function CasesPage() {
                       <select
                         value={c.status}
                         onChange={(e) => updateStatus(c._id, e.target.value)}
+                        disabled={!canEdit}
                         className={`text-xs border-0 rounded px-2 py-0.5 ${STATUS_COLORS[c.status]}`}
                       >
                         {STATUSES.map((s) => (
@@ -191,10 +178,17 @@ export default function CasesPage() {
                         <span className="text-xs text-gray-400">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <button onClick={() => remove(c._id)} className="text-xs text-red-600 hover:underline">
-                        Delete
-                      </button>
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      {canEdit && (
+                        <button onClick={() => setEditing(c)} className="text-xs text-[#0176d3] hover:underline mr-3">
+                          Edit
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button onClick={() => remove(c._id)} className="text-xs text-red-600 hover:underline">
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -204,69 +198,19 @@ export default function CasesPage() {
         </div>
       </div>
 
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title="New Case"
-        footer={
-          <>
-            <button onClick={() => setOpen(false)} className="px-3 py-1.5 text-sm border border-gray-300 rounded">
-              Cancel
-            </button>
-            <button onClick={save} className="px-3 py-1.5 text-sm bg-[#0176d3] text-white rounded">
-              Save
-            </button>
-          </>
-        }
-      >
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <Field label="Subject" required>
-              <TextInput value={form.subject || ''} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
-            </Field>
-          </div>
-          <Field label="Priority">
-            <SelectInput value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
-              {PRIORITIES.map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </SelectInput>
-          </Field>
-          <Field label="Origin">
-            <SelectInput value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })}>
-              {ORIGINS.map((o) => (
-                <option key={o}>{o}</option>
-              ))}
-            </SelectInput>
-          </Field>
-          <Field label="Type">
-            <SelectInput value={form.type || ''} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-              <option value="">—</option>
-              {TYPES.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </SelectInput>
-          </Field>
-          <Field label="Status">
-            <SelectInput value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-              {STATUSES.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </SelectInput>
-          </Field>
-          <Field label="Contact Name">
-            <TextInput value={form.contactName || ''} onChange={(e) => setForm({ ...form, contactName: e.target.value })} />
-          </Field>
-          <Field label="Contact Email">
-            <TextInput type="email" value={form.contactEmail || ''} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} />
-          </Field>
-          <div className="col-span-2">
-            <Field label="Description">
-              <TextArea rows={4} onChange={(e) => setForm({ ...form, ...({ description: e.target.value } as any) })} />
-            </Field>
-          </div>
-        </div>
-      </Modal>
+      <ThemeScope theme={MODULE_THEMES['sales-service']}>
+        <RecordFormModal
+          object="Case"
+          open={editing !== null}
+          record={editing && editing !== 'new' ? editing : undefined}
+          submit={moduleSubmit(API, editing && editing !== 'new' ? editing._id : undefined)}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            reload();
+          }}
+        />
+      </ThemeScope>
     </>
   );
 }

@@ -19,6 +19,11 @@ const UserSchema = new Schema({
   },
   isActive: { type: Boolean, default: true },
 
+  // Platform access (Setup → Users). profileId empty = derived from orgRole.
+  profileId: { type: String, default: null },
+  permissionSetIds: [{ type: String }],
+  permissionSetGroupIds: [{ type: String }],
+
   // Legacy fields (kept for backward compatibility)
   role: { type: String, default: 'user' },
   company: { type: String, default: '' },

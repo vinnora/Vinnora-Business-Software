@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { ComponentType } from 'react';
 import { Waves } from '@/components/ocean/Waves';
 import { Bubbles } from '@/components/ocean/Bubbles';
+import { EnvironmentSwitcher } from '@/components/platform/EnvironmentSwitcher';
 import {
   SalesServiceIcon,
   AccountingIcon,
@@ -98,6 +99,19 @@ export default function Dashboard() {
             {session ? (
               <>
                 <span className="text-sm text-white/80 hidden sm:inline">Welcome, {userName}</span>
+                <EnvironmentSwitcher />
+                <Link
+                  href="/dashboard/reports"
+                  className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition"
+                >
+                  Reports
+                </Link>
+                <Link
+                  href="/dashboard/setup"
+                  className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition"
+                >
+                  Setup
+                </Link>
                 <button
                   onClick={() => signOut()}
                   className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition"

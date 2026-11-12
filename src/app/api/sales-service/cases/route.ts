@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
+import mongoose from 'mongoose';
+import { getAuthContext } from '@/lib/auth-helpers';
+import { getObjectAccess, buildCreateDoc, buildUpdate } from '@/lib/platform/access';
+import { legacyOwnerKey, tenantOf } from '@/lib/platform/metadata';
+import { BadRequestError, NotFoundError, platformErrorResponse } from '@/lib/platform/errors';
 import Case from '@/models/Case';
 import SLA from '@/models/SLA';
 import { runWorkflows } from '@/lib/workflows';
@@ -15,9 +17,9 @@ function generateCaseNumber() {
 
 export async function GET(req: NextRequest) {
   try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Case');
+    access.assert('read');
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
@@ -25,7 +27,7 @@ export async function GET(req: NextRequest) {
     const accountId = searchParams.get('accountId');
     const search = searchParams.get('search');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
     if (accountId) filter.accountId = accountId;
@@ -36,105 +38,117 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const cases = await Case.find(filter).sort({ createdAt: -1 }).limit(200);
-    return NextResponse.json(cases);
+    const cases = await Case.find({ $and: [await access.readFilter(), filter] })
+      .sort({ createdAt: -1 })
+      .limit(200);
+    return NextResponse.json(access.shapeMany(cases));
   } catch (error) {
-    console.error('Error fetching cases:', error);
-    return NextResponse.json([], { status: 200 });
+    return platformErrorResponse(error, 'Error fetching cases:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
-
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Case');
+    // Server-maintained fields; clients can't supply them on create.
     const body = await req.json();
-    if (!body.subject) {
-      return NextResponse.json({ error: 'subject is required' }, { status: 400 });
-    }
+    delete body.caseNumber;
+    delete body.slaId;
+    delete body.slaDueAt;
+
+    const prepared = await access.prepareWrite(body, undefined, { passthrough: true });
 
     // Auto-attach SLA based on priority
-    let slaDueAt: Date | undefined;
-    let slaId: string | undefined;
-    const priority = body.priority || 'Medium';
+    const priority = (prepared.set.priority as string) || 'Medium';
+    const extra: Record<string, unknown> = { caseNumber: generateCaseNumber(), priority };
     const sla = await SLA.findOne({
-      userId,
+      $or: [{ orgId: tenantOf(ctx) }, { userId: legacyOwnerKey(ctx) }],
       active: true,
       appliesToPriority: priority,
     });
     if (sla) {
-      slaId = String(sla._id);
-      slaDueAt = new Date(Date.now() + sla.resolutionMinutes * 60 * 1000);
+      extra.slaId = String(sla._id);
+      extra.slaDueAt = new Date(Date.now() + sla.resolutionMinutes * 60 * 1000);
     }
 
-    const newCase = await Case.create({
-      ...body,
-      userId,
-      caseNumber: generateCaseNumber(),
-      priority,
-      slaId,
-      slaDueAt,
+    const newCase = await Case.create(buildCreateDoc(access, prepared, extra));
+    await runWorkflows({
+      objectType: 'Case',
+      event: 'created',
+      record: newCase,
+      userId: legacyOwnerKey(ctx),
+      orgId: tenantOf(ctx),
     });
-    await runWorkflows({ objectType: 'Case', event: 'created', record: newCase, userId });
-    return NextResponse.json(newCase, { status: 201 });
+    return NextResponse.json(access.shape(newCase), { status: 201 });
   } catch (error) {
-    console.error('Error creating case:', error);
-    return NextResponse.json({ error: 'Failed to create case' }, { status: 500 });
+    return platformErrorResponse(error, 'Error creating case:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
-    await dbConnect();
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Case');
     const body = await req.json();
     const { _id, addComment, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    if (!_id) throw new BadRequestError('_id required');
+    if (!mongoose.isValidObjectId(_id)) throw new BadRequestError('Invalid _id');
 
-    if (updates.status === 'Resolved' && !updates.resolvedAt) {
-      updates.resolvedAt = new Date();
-    }
-    if (updates.status === 'Closed' && !updates.closedAt) {
-      updates.closedAt = new Date();
-    }
+    const existing = await Case.findOne({ $and: [{ _id }, await access.readFilter()] });
+    if (!existing) throw new NotFoundError('Case not found');
 
-    let updated;
+    const prepared = await access.prepareWrite(updates, existing, { passthrough: true });
+
+    const extraSet: Record<string, unknown> = {};
+    if (prepared.set.status === 'Resolved' && !updates.resolvedAt) extraSet.resolvedAt = new Date();
+    if (prepared.set.status === 'Closed' && !updates.closedAt) extraSet.closedAt = new Date();
+
+    const update: Record<string, unknown> = buildUpdate(access, prepared, extraSet);
     if (addComment) {
-      updated = await Case.findByIdAndUpdate(
-        _id,
-        { ...updates, $push: { comments: { ...addComment, createdAt: new Date() } } },
-        { new: true }
-      );
-    } else {
-      updated = await Case.findByIdAndUpdate(_id, updates, { new: true });
+      update.$push = {
+        comments: {
+          ...addComment,
+          authorId: addComment.authorId || ctx.userId,
+          authorName: addComment.authorName || ctx.user?.name || ctx.user?.email || '',
+          createdAt: new Date(),
+        },
+      };
     }
+
+    const updated = await Case.findByIdAndUpdate(_id, update, { new: true });
     if (updated) {
       await runWorkflows({
         objectType: 'Case',
         event: 'fieldChanged',
         record: updated,
-        userId: updated.userId,
-        changedFields: Object.keys(updates),
+        userId: legacyOwnerKey(ctx),
+        orgId: tenantOf(ctx),
+        changedFields: prepared.changed,
       });
     }
-    return NextResponse.json(updated);
+    return NextResponse.json(access.shape(updated));
   } catch (error) {
-    console.error('Error updating case:', error);
-    return NextResponse.json({ error: 'Failed to update case' }, { status: 500 });
+    return platformErrorResponse(error, 'Error updating case:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
-    await dbConnect();
+    const ctx = await getAuthContext('sales-service');
+    const access = await getObjectAccess(ctx, 'Case');
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await Case.findByIdAndDelete(id);
+    if (!id) throw new BadRequestError('id required');
+    if (!mongoose.isValidObjectId(id)) throw new BadRequestError('Invalid id');
+
+    const existing = await Case.findOne({ $and: [{ _id: id }, await access.readFilter()] });
+    if (!existing) throw new NotFoundError('Case not found');
+    access.assert('delete');
+
+    await Case.deleteOne({ _id: existing._id });
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting case:', error);
-    return NextResponse.json({ error: 'Failed to delete case' }, { status: 500 });
+    return platformErrorResponse(error, 'Error deleting case:');
   }
 }

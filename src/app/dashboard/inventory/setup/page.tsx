@@ -13,6 +13,7 @@ import {
   Badge,
 } from '../_components/ui';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
+import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
 
 type Tab =
   | 'picklists'
@@ -24,7 +25,7 @@ type Tab =
   | 'eway-defaults'
   | 'integrations'
   | 'connections'
-  | 'subscription';
+  | 'objects' | 'access' | 'subscription';
 
 const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'picklists', label: 'Picklists', desc: 'Categories, brands, units, statuses' },
@@ -36,6 +37,8 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'eway-defaults', label: 'E-Way Defaults', desc: 'Default consignor / GSTIN' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
+  { id: 'objects', label: 'Object Manager', desc: 'Objects, fields, rules & page layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Profiles & permission sets' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
@@ -75,6 +78,8 @@ export default function InventorySetupPage() {
           {tab === 'eway-defaults' && <EwayDefaultsTab />}
           {tab === 'integrations' && <InvIntegrationsTab />}
           {tab === 'connections' && <InvConnectionsTab />}
+          {tab === 'objects' && <ModuleObjectManager app="inventory" />}
+          {tab === 'access' && <ModuleAccessLink app="inventory" />}
           {tab === 'subscription' && <SubscriptionPlan accentColor="#E2671A" accentBg="#FFF6E5" textColor="#4A1D0F" mutedColor="#A0522D" borderColor="#FFE5C4" />}
         </div>
       </div>

@@ -1,43 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
+import mongoose from 'mongoose';
+import { getAuthContext } from '@/lib/auth-helpers';
+import { getObjectAccess, type ObjectAccess } from '@/lib/platform/access';
+import { legacyOwnerKey, tenantOf } from '@/lib/platform/metadata';
+import { NotFoundError, platformErrorResponse } from '@/lib/platform/errors';
 import Account from '@/models/Account';
 import Contact from '@/models/Contact';
 import Opportunity from '@/models/Opportunity';
 import Case from '@/models/Case';
 import Activity from '@/models/Activity';
 
+function canRead(access: ObjectAccess) {
+  try {
+    access.assert('read');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * 360-degree view: returns the account plus all related child records.
  */
-export async function GET(_req: NextRequest, ctx: RouteContext<'/api/sales-service/accounts/[id]'>) {
+export async function GET(_req: NextRequest, routeCtx: RouteContext<'/api/sales-service/accounts/[id]'>) {
   try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
-    const { id } = await ctx.params;
+    const ctx = await getAuthContext('sales-service');
+    const { id } = await routeCtx.params;
 
-    const account = await Account.findOne({ _id: id, userId });
-    if (!account) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const accountAccess = await getObjectAccess(ctx, 'Account');
+    accountAccess.assert('read');
+    if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Not found');
+
+    const account = await Account.findOne({ $and: [{ _id: id }, await accountAccess.readFilter()] });
+    if (!account) throw new NotFoundError('Not found');
+
+    const [contactAccess, oppAccess, caseAccess] = await Promise.all([
+      getObjectAccess(ctx, 'Contact'),
+      getObjectAccess(ctx, 'Opportunity'),
+      getObjectAccess(ctx, 'Case'),
+    ]);
+
+    const related = async (access: ObjectAccess, find: (filter: Record<string, unknown>) => Promise<unknown[]>) => {
+      if (!canRead(access)) return [];
+      const docs = await find({ $and: [await access.readFilter(), { accountId: id }] });
+      return access.shapeMany(docs);
+    };
 
     const [contacts, opportunities, cases, activities] = await Promise.all([
-      Contact.find({ userId, accountId: id }).sort({ updatedAt: -1 }).limit(50),
-      Opportunity.find({ userId, accountId: id }).sort({ closeDate: 1 }).limit(50),
-      Case.find({ userId, accountId: id }).sort({ createdAt: -1 }).limit(50),
+      related(contactAccess, (f) => Contact.find(f).sort({ updatedAt: -1 }).limit(50).exec()),
+      related(oppAccess, (f) => Opportunity.find(f).sort({ closeDate: 1 }).limit(50).exec()),
+      related(caseAccess, (f) => Case.find(f).sort({ createdAt: -1 }).limit(50).exec()),
+      // Activities aren't permission-enforced yet: tenant scope only.
       Activity.find({
-        userId,
-        $or: [
-          { relatedToType: 'Account', relatedToId: id },
-        ],
+        $or: [{ orgId: tenantOf(ctx) }, { userId: legacyOwnerKey(ctx) }],
+        relatedToType: 'Account',
+        relatedToId: id,
       })
         .sort({ createdAt: -1 })
         .limit(50),
     ]);
 
-    return NextResponse.json({ account, contacts, opportunities, cases, activities });
+    return NextResponse.json({ account: accountAccess.shape(account), contacts, opportunities, cases, activities });
   } catch (error) {
-    console.error('Error fetching account 360:', error);
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+    return platformErrorResponse(error, 'Error fetching account 360:');
   }
 }

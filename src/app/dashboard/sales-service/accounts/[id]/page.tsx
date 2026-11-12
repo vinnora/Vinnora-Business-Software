@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { RecordFormModal, moduleSubmit, useDescribe } from '@/components/platform/RecordForm';
+import { ThemeScope } from '@/components/platform/ui';
+import { MODULE_THEMES } from '@/components/platform/themes';
 
 const fmtINR = (n = 0) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
@@ -13,6 +16,8 @@ export default function Account360Page() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'related' | 'details' | 'activity'>('related');
+  const [editingAccount, setEditingAccount] = useState(false);
+  const canEdit = useDescribe('Account').data?.access.edit ?? true;
 
   useEffect(() => {
     fetch(`/api/sales-service/accounts/${id}`)
@@ -22,7 +27,8 @@ export default function Account360Page() {
   }, [id]);
 
   if (loading) return <div className="p-6 text-sm text-gray-500">Loading…</div>;
-  if (!data || !data.account) return <div className="p-6 text-sm text-gray-500">Account not found.</div>;
+  if (!data || !data.account)
+    return <div className="p-6 text-sm text-gray-500">{data?.error || 'Account not found.'}</div>;
 
   const { account, contacts, opportunities, cases, activities } = data;
 
@@ -51,12 +57,22 @@ export default function Account360Page() {
                 .join(' • ')}
             </div>
           </div>
-          <Link
-            href="/dashboard/sales-service/accounts"
-            className="text-sm text-[#0176d3] hover:underline"
-          >
-            ← Back to Accounts
-          </Link>
+          <div className="flex items-center gap-3">
+            {canEdit && (
+              <button
+                onClick={() => setEditingAccount(true)}
+                className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
+              >
+                Edit
+              </button>
+            )}
+            <Link
+              href="/dashboard/sales-service/accounts"
+              className="text-sm text-[#0176d3] hover:underline"
+            >
+              ← Back to Accounts
+            </Link>
+          </div>
         </div>
 
         {/* KPI strip */}
@@ -203,6 +219,20 @@ export default function Account360Page() {
           </div>
         )}
       </div>
+
+      <ThemeScope theme={MODULE_THEMES['sales-service']}>
+        <RecordFormModal
+          object="Account"
+          open={editingAccount}
+          record={account}
+          submit={moduleSubmit('/api/sales-service/accounts', account._id)}
+          onClose={() => setEditingAccount(false)}
+          onSaved={(saved) => {
+            setEditingAccount(false);
+            setData({ ...data, account: { ...account, ...saved } });
+          }}
+        />
+      </ThemeScope>
     </div>
   );
 }

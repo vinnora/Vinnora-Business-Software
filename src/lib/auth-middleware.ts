@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-/**
- * Edge middleware for route protection.
- * - Redirects unauthenticated users from /dashboard/* to /auth/signin
- * - Returns 401 for unauthenticated /api/* (except auth routes)
- * Actual permission checks happen in route handlers via getAuthContext.
- */
+// PRESERVED — not wired up. Auth is intentionally bypassed during development
+// via src/proxy.ts. When ready to enforce auth, move the body of this function
+// into `export function proxy(...)` in src/proxy.ts (and keep the matcher config).
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
