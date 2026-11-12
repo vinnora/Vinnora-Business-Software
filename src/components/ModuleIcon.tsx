@@ -21,7 +21,7 @@ const base = (size: number, cls: string) => ({
   xmlns: 'http://www.w3.org/2000/svg',
 });
 
-/** Sales & Service — headset / customer support */
+/** Sell & Support — headset / customer support */
 export function SalesServiceIcon({ size = 28, className = '' }: Props) {
   return (
     <svg {...base(size, className)}>

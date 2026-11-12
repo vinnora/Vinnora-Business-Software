@@ -17,10 +17,10 @@ export const POST = route(async (req) => {
   const { ctx, prodTenant } = await productionContext('manageSandboxes');
   const body = await readJson(req);
   const name = str(body.name, 40);
-  if (!name) throw new BadRequestError('Sandbox name is required');
+  if (!name) throw new BadRequestError('Test workspace name is required');
   const type = ['developer', 'partial', 'full'].includes(String(body.type)) ? String(body.type) : 'developer';
   const count = await Sandbox.countDocuments({ orgId: ctx.orgId });
-  if (count >= 10) throw new BadRequestError('You can have up to 10 sandboxes. Delete one first.');
+  if (count >= 10) throw new BadRequestError('You can have up to 10 test workspaces. Delete one first.');
 
   const _id = new mongoose.Types.ObjectId();
   const sbx = await Sandbox.create({

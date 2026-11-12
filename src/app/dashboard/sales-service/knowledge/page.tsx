@@ -56,7 +56,7 @@ export default function KnowledgePage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this article?')) return;
+    if (!confirm('Delete this help article?')) return;
     await fetch(`/api/sales-service/knowledge?id=${id}`, { method: 'DELETE' });
     setSelected(null);
     load();
@@ -65,7 +65,7 @@ export default function KnowledgePage() {
   return (
     <>
       <PageHeader
-        title="Knowledge Base"
+        title="Help Library"
         subtitle="Service"
         count={items.length}
         actions={
@@ -74,14 +74,14 @@ export default function KnowledgePage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && load()}
-              placeholder="Search articles…"
+              placeholder="Search help articles…"
               className="px-3 py-1.5 text-sm border border-gray-300 rounded"
             />
             <button
               onClick={() => setOpen(true)}
               className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
             >
-              + New Article
+              + New Help Article
             </button>
           </>
         }
@@ -90,12 +90,12 @@ export default function KnowledgePage() {
       <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-1 bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="px-4 py-2 bg-[#f3f3f3] text-xs uppercase text-gray-600 font-semibold">
-            Articles
+            Help Articles
           </div>
           {loading ? (
             <div className="p-4 text-sm text-gray-500">Loading…</div>
           ) : items.length === 0 ? (
-            <div className="p-4 text-sm text-gray-500">No articles yet.</div>
+            <div className="p-4 text-sm text-gray-500">No help articles yet.</div>
           ) : (
             <ul>
               {items.map((a) => (
@@ -147,7 +147,7 @@ export default function KnowledgePage() {
           ) : (
             <div className="text-center text-gray-400 py-16">
               <div className="text-4xl mb-2">📚</div>
-              <div className="text-sm">Select an article to view its content</div>
+              <div className="text-sm">Select a help article to view its content</div>
             </div>
           )}
         </div>
@@ -156,7 +156,7 @@ export default function KnowledgePage() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="New Article"
+        title="New Help Article"
         footer={
           <>
             <button onClick={() => setOpen(false)} className="px-3 py-1.5 text-sm border border-gray-300 rounded">

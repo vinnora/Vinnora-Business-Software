@@ -30,7 +30,7 @@ type Tab = 'overview' | 'apps' | 'objects' | 'fields' | 'system';
 
 const EMPTY: ObjectPermission = { create: false, read: false, edit: false, delete: false, viewAll: false, modifyAll: false };
 
-/** Toggle one object permission keeping Salesforce dependencies consistent. */
+/** Toggle one object permission keeping dependent permissions consistent. */
 export function togglePerm(p: ObjectPermission, key: keyof ObjectPermission, value: boolean): ObjectPermission {
   if (value) return normalizeObjectPermission({ ...p, [key]: true });
   const next = { ...p, [key]: false };
@@ -103,7 +103,7 @@ export function PermissionEditor({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <button type="button" onClick={onBack} className="text-sm text-[var(--p-accent)] hover:underline">
-          ← {isProfile ? 'Profiles' : 'Permission Sets'}
+          ← {isProfile ? 'Roles' : 'Access Packs'}
         </button>
         <div className="flex items-center gap-3">
           {savedAt && <span className="text-xs text-green-700">Saved</span>}
@@ -117,16 +117,16 @@ export function PermissionEditor({
       </div>
       <div className="flex items-center gap-2 mb-1">
         <h2 className="text-xl font-semibold text-[var(--p-text)]">{item.name}</h2>
-        <Badge tone={isProfile ? 'accent' : 'blue'}>{isProfile ? 'Profile' : 'Permission Set'}</Badge>
+        <Badge tone={isProfile ? 'accent' : 'blue'}>{isProfile ? 'Role' : 'Access Pack'}</Badge>
         {item.isSystem && <Badge>Standard</Badge>}
       </div>
       {locked && (
         <p className="text-xs bg-blue-50 border border-blue-200 text-blue-800 rounded p-2 my-2">
-          System Administrator always has full access to every app, object, field and Setup page. Clone it to create a restricted admin profile.
+          System Administrator always has full access to every app, module, field and Settings page. Clone it to create a restricted admin role.
         </p>
       )}
       {!isProfile && (
-        <p className="text-xs text-gray-500 mb-2">Permission sets only grant access: they add to whatever the user&apos;s profile allows, never take it away.</p>
+        <p className="text-xs text-gray-500 mb-2">Access packs only grant access: they add to whatever the user&apos;s role allows, never take it away.</p>
       )}
       <ErrorBanner error={error} />
       <Tabs<Tab>
@@ -135,7 +135,7 @@ export function PermissionEditor({
         tabs={[
           { id: 'overview', label: 'Overview' },
           { id: 'apps', label: 'App Access' },
-          { id: 'objects', label: 'Object Settings' },
+          { id: 'objects', label: 'Module Settings' },
           { id: 'fields', label: 'Field Permissions' },
           { id: 'system', label: 'System Permissions' },
         ]}
@@ -154,7 +154,7 @@ export function PermissionEditor({
         {tab === 'apps' && (
           <div>
             <p className="text-sm text-gray-600 mb-3">
-              Apps users with this {isProfile ? 'profile' : 'permission set'} can open. Apps also have to be on your subscription plan.
+              Apps users with this {isProfile ? 'role' : 'access pack'} can open. Apps also have to be on your subscription plan.
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {ALL_APP_KEYS.map((a) => (
@@ -226,11 +226,11 @@ function ObjectSettings({
             </option>
           ))}
         </Select>
-        <span className="text-xs text-gray-500">View All ignores restriction rules. Modify All lets users edit and delete every record.</span>
+        <span className="text-xs text-gray-500">View All ignores record filters. Modify All lets users edit and delete every record.</span>
       </div>
       {isProfile && (
         <div className="bg-[var(--p-accent-bg)] border border-[var(--p-border)] rounded p-3 mb-3">
-          <div className="text-sm font-medium mb-1">Default for objects not listed (e.g. new custom objects)</div>
+          <div className="text-sm font-medium mb-1">Default for modules not listed (e.g. new custom modules)</div>
           <div className="flex flex-wrap gap-4">
             {OBJECT_PERMISSION_KEYS.map((k) => (
               <Checkbox
@@ -247,7 +247,7 @@ function ObjectSettings({
       <Table
         head={
           <tr>
-            <th className={th}>Object</th>
+            <th className={th}>Module</th>
             {OBJECT_PERMISSION_KEYS.map((k) => (
               <th key={k} className={`${th} text-center`}>
                 {OBJECT_PERMISSION_LABELS[k]}
@@ -339,7 +339,7 @@ function FieldSettings({
           ))}
         </Select>
         <span className="text-xs text-gray-500">
-          {isProfile ? 'Fields are visible and editable unless you restrict them here.' : 'Grant read or edit access to fields hidden by a profile.'}
+          {isProfile ? 'Fields are visible and editable unless you restrict them here.' : 'Grant read or edit access to fields hidden by a role.'}
         </span>
       </div>
       <ErrorBanner error={error} />
@@ -385,7 +385,7 @@ function FieldSettings({
                     aria-label={`${f.label} edit`}
                     checked={requiredLock || p.edit}
                     disabled={locked || readOnlyType || requiredLock}
-                    title={readOnlyType ? 'System and formula fields are always read-only' : lockTitle}
+                    title={readOnlyType ? 'System and calculated fields are always read-only' : lockTitle}
                     onChange={(e) => set(f, { read: e.target.checked || p.read, edit: e.target.checked })}
                   />
                 </td>

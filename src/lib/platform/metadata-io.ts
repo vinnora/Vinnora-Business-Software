@@ -55,15 +55,15 @@ export const COMPONENT_ORDER: ComponentType[] = [
 ];
 
 export const COMPONENT_LABELS: Record<ComponentType, string> = {
-  object: 'Custom Object',
+  object: 'Custom Module',
   field: 'Field',
-  profile: 'Profile',
-  permissionSet: 'Permission Set',
-  permissionSetGroup: 'Permission Set Group',
-  validationRule: 'Validation Rule',
-  restrictionRule: 'Restriction Rule',
-  layout: 'Page Layout',
-  layoutAssignment: 'Layout Assignment',
+  profile: 'Role',
+  permissionSet: 'Access Pack',
+  permissionSetGroup: 'Access Pack Group',
+  validationRule: 'Check Rule',
+  restrictionRule: 'Record Filter',
+  layout: 'Form Layout',
+  layoutAssignment: 'Form Layout Assignment',
   report: 'Report',
   dashboard: 'Dashboard',
 };
@@ -289,7 +289,7 @@ export async function importComponent(tenant: string, c: Component, actor: Actor
     case 'layoutAssignment': {
       const profileId = await profileIdByKey(tenant, String(d.profile));
       const layout = await PageLayout.findOne({ orgId: tenant, objectApiName: d.objectApiName, name: d.layout }).select('_id').lean();
-      if (!profileId || !layout) throw new Error(`Layout assignment ${c.key}: profile or layout missing in target`);
+      if (!profileId || !layout) throw new Error(`Form layout assignment ${c.key}: role or form layout missing in target`);
       await LayoutAssignment.updateOne(
         { orgId: tenant, objectApiName: d.objectApiName, profileId },
         { $set: { layoutId: String(layout._id) } },
@@ -500,11 +500,11 @@ function issuesFor(m: Map<string, Component>): Issue[] {
     switch (c.type) {
       case 'field': {
         if (!objectExists(obj, m)) {
-          add(c, `Object ${obj} doesn't exist`);
+          add(c, `Module ${obj} doesn't exist`);
           break;
         }
         if (d.type === 'lookup' && d.referenceTo && !objectExists(String(d.referenceTo), m)) {
-          add(c, `Looks up to ${d.referenceTo}, which doesn't exist`);
+          add(c, `Links to ${d.referenceTo}, which doesn't exist`);
         }
         if (d.type === 'formula' && d.formula) {
           const r = checkFormula(String(d.formula), fieldNames(obj, m));
@@ -515,7 +515,7 @@ function issuesFor(m: Map<string, Component>): Issue[] {
       case 'validationRule':
       case 'restrictionRule': {
         if (!objectExists(obj, m)) {
-          add(c, `Object ${obj} doesn't exist`);
+          add(c, `Module ${obj} doesn't exist`);
           break;
         }
         const names = new Set(fieldNames(obj, m).map((n) => n.toLowerCase()));
@@ -528,15 +528,15 @@ function issuesFor(m: Map<string, Component>): Issue[] {
         }
         if (c.type === 'restrictionRule') {
           for (const ref of (d.appliesTo_refs as string[]) || []) {
-            if (d.appliesTo === 'profiles' && !ref.startsWith('std:') && !m.has(mapKey('profile', ref))) add(c, `Applies to profile ${ref}, which doesn't exist`);
-            if (d.appliesTo === 'permissionSets' && !m.has(mapKey('permissionSet', ref))) add(c, `Applies to permission set ${ref}, which doesn't exist`);
+            if (d.appliesTo === 'profiles' && !ref.startsWith('std:') && !m.has(mapKey('profile', ref))) add(c, `Applies to role ${ref}, which doesn't exist`);
+            if (d.appliesTo === 'permissionSets' && !m.has(mapKey('permissionSet', ref))) add(c, `Applies to access pack ${ref}, which doesn't exist`);
           }
         }
         break;
       }
       case 'layout': {
         if (!objectExists(obj, m)) {
-          add(c, `Object ${obj} doesn't exist`);
+          add(c, `Module ${obj} doesn't exist`);
           break;
         }
         const names = new Set(fieldNames(obj, m));
@@ -547,17 +547,17 @@ function issuesFor(m: Map<string, Component>): Issue[] {
         break;
       }
       case 'layoutAssignment':
-        if (!String(d.profile).startsWith('std:') && !m.has(mapKey('profile', String(d.profile)))) add(c, `Profile ${d.profile} doesn't exist`);
-        if (!m.has(mapKey('layout', `${obj}.${d.layout}`))) add(c, `Layout ${d.layout} doesn't exist`);
+        if (!String(d.profile).startsWith('std:') && !m.has(mapKey('profile', String(d.profile)))) add(c, `Role ${d.profile} doesn't exist`);
+        if (!m.has(mapKey('layout', `${obj}.${d.layout}`))) add(c, `Form layout ${d.layout} doesn't exist`);
         break;
       case 'permissionSetGroup':
         for (const s of (d.permissionSets as string[]) || []) {
-          if (!m.has(mapKey('permissionSet', s))) add(c, `Includes permission set ${s}, which doesn't exist`);
+          if (!m.has(mapKey('permissionSet', s))) add(c, `Includes access pack ${s}, which doesn't exist`);
         }
         break;
       case 'report': {
         if (!objectExists(obj, m)) {
-          add(c, `Object ${obj} doesn't exist`);
+          add(c, `Module ${obj} doesn't exist`);
           break;
         }
         const names = new Set(fieldNames(obj, m));
@@ -627,7 +627,7 @@ export function validateSelection(source: Component[], target: Component[], sele
       warnings.push({
         type: it.type,
         key: it.key,
-        message: it.type === 'object' ? 'Deletes this object and all of its records in production.' : "Deletes this field and its values on production records.",
+        message: it.type === 'object' ? 'Deletes this module and all of its records in production.' : "Deletes this field and its values on production records.",
       });
     }
   }

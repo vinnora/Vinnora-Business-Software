@@ -1,5 +1,5 @@
 /**
- * Salesforce-style formula engine.
+ * Formula engine.
  *
  * Supports:
  *  - literals: 12, 3.5, "text", 'text', TRUE, FALSE, NULL
@@ -397,7 +397,7 @@ export const FUNCTIONS: Record<string, { fn: Fn; min: number; max: number; sig: 
     fn: (a, _c, ev) => { const v = ev(a[0]); return isBlank(v) ? ev(a[1]) : v; } },
   ISNUMBER: { min: 1, max: 1, sig: 'ISNUMBER(text)', doc: 'TRUE if text is a number.', category: 'Logical',
     fn: (a, _c, ev) => { const v = ev(a[0]); return !isBlank(v) && !Number.isNaN(Number(v)); } },
-  ISPICKVAL: { min: 2, max: 2, sig: 'ISPICKVAL(picklist_field, "value")', doc: 'TRUE if the picklist equals the value.', category: 'Logical',
+  ISPICKVAL: { min: 2, max: 2, sig: 'ISPICKVAL(dropdown_field, "value")', doc: 'TRUE if the dropdown equals the value.', category: 'Logical',
     fn: (a, _c, ev) => toStr(ev(a[0])) === toStr(ev(a[1])) },
   INCLUDES: { min: 2, max: 2, sig: 'INCLUDES(multiselect_field, "value")', doc: 'TRUE if the multi-select contains the value.', category: 'Logical',
     fn: (a, _c, ev) => {
@@ -696,7 +696,7 @@ export function checkFormula(src: string, fieldNames: string[]): FormulaCheckRes
         continue;
       }
       if (!lower.has(r.toLowerCase())) {
-        return { ok: false, error: `Field ${r} does not exist on this object`, references: [...refs] };
+        return { ok: false, error: `Field ${r} does not exist on this module`, references: [...refs] };
       }
     }
     return { ok: true, references: [...refs] };

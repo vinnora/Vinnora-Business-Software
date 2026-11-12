@@ -7,6 +7,7 @@ import {
 } from '../_components/ui';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
 import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
+import { APP_LABELS } from '@/lib/platform/types';
 
 type Tab = 'general' | 'workflows' | 'integrations' | 'connections' | 'objects' | 'access' | 'subscription';
 
@@ -15,8 +16,8 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'workflows', label: 'Workflows', desc: 'Automate manufacturing events' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
-  { id: 'objects', label: 'Object Manager', desc: 'Objects, fields, rules & page layouts' },
-  { id: 'access', label: 'Users & Access', desc: 'Profiles & permission sets' },
+  { id: 'objects', label: 'Data Model', desc: 'Modules, fields, rules & layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Roles & access packs' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
@@ -25,7 +26,7 @@ export default function ManufacturingSetupPage() {
 
   return (
     <>
-      <PageHeader title="Setup" subtitle="Customize Manufacturing" />
+      <PageHeader title="Settings" subtitle="Customize Manufacturing" />
       <div className="flex">
         <aside className="w-64 bg-white border-r border-[#E5E7EB] min-h-[calc(100vh-7rem)]">
           <div className="p-3 text-xs uppercase tracking-wide text-[#6B7280] font-semibold">
@@ -239,7 +240,7 @@ function WorkflowsTab() {
             <thead className="bg-[#F3F4F6] text-xs uppercase text-[#6B7280]">
               <tr>
                 <th className="text-left px-4 py-2.5">Name</th>
-                <th className="text-left px-4 py-2.5">Object</th>
+                <th className="text-left px-4 py-2.5">Module</th>
                 <th className="text-left px-4 py-2.5">Trigger</th>
                 <th className="text-center px-4 py-2.5">Active</th>
                 <th className="text-left px-4 py-2.5">Default</th>
@@ -289,7 +290,7 @@ function WorkflowsTab() {
           <TextInput value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Object Type">
+          <Field label="Module">
             <SelectInput value={form.objectType} onChange={(e) => setForm({ ...form, objectType: e.target.value })}>
               {WORKFLOW_OBJECTS.map((o) => <option key={o} value={o}>{o}</option>)}
             </SelectInput>
@@ -424,8 +425,8 @@ function ConnectionsTab() {
                     <div className="font-medium text-[#1C1C1E]">{c.name}</div>
                     {c.description && <div className="text-[10px] text-[#6B7280]">{c.description}</div>}
                   </td>
-                  <td className="px-4 py-2 text-xs text-[#4A4E54]">{c.sourceApp} / {c.sourceObject} / {c.sourceEvent}</td>
-                  <td className="px-4 py-2 text-xs text-[#4A4E54]">{c.targetApp} / {c.targetAction}</td>
+                  <td className="px-4 py-2 text-xs text-[#4A4E54]">{(APP_LABELS as Record<string, string>)[c.sourceApp] ?? c.sourceApp} / {c.sourceObject} / {c.sourceEvent}</td>
+                  <td className="px-4 py-2 text-xs text-[#4A4E54]">{(APP_LABELS as Record<string, string>)[c.targetApp] ?? c.targetApp} / {c.targetAction}</td>
                   <td className="px-4 py-2 text-center">
                     <button
                       onClick={() => toggle(c)}

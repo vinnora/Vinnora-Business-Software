@@ -21,7 +21,7 @@ export function cleanConditions(raw: unknown, object: ObjectDescribe, opts: { al
     const def = byName.get(field);
     if (!def) throw new BadRequestError(`Condition ${i + 1}: choose a field`);
     if (def.type === 'formula' && opts.allowFormula === false) {
-      throw new BadRequestError(`Condition ${i + 1}: formula fields can't be used in restriction rules`);
+      throw new BadRequestError(`Condition ${i + 1}: calculated fields can't be used in record filters`);
     }
     if (!OPERATOR_LABELS[operator]) throw new BadRequestError(`Condition ${i + 1}: choose an operator`);
     const value = VALUELESS_OPERATORS.includes(operator) ? '' : String(c?.value ?? '').slice(0, 1000);

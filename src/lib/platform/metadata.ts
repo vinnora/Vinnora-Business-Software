@@ -163,7 +163,7 @@ export async function describeObject(tenant: string, apiName: string): Promise<O
   }
 
   const obj = await ObjectDefinition.findOne({ orgId: tenant, apiName });
-  if (!obj) throw new NotFoundError(`Object ${apiName} not found`);
+  if (!obj) throw new NotFoundError(`Module ${apiName} not found`);
   const defs = (await FieldDefinition.find({ orgId: tenant, objectApiName: obj.apiName, isOverride: { $ne: true } }).sort({
     order: 1,
     createdAt: 1,

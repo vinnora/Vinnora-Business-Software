@@ -10,9 +10,9 @@ import { NotFoundError } from '@/lib/platform/errors';
 type P = { id: string };
 
 async function load(tenant: string, id: string) {
-  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Group not found');
+  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Access pack group not found');
   const g = await PermissionSetGroup.findOne({ _id: id, orgId: tenant });
-  if (!g) throw new NotFoundError('Group not found');
+  if (!g) throw new NotFoundError('Access pack group not found');
   return g;
 }
 

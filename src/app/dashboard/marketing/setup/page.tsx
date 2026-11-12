@@ -75,8 +75,8 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'automations', label: 'Automations', desc: 'Marketing automation rules' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
-  { id: 'objects', label: 'Object Manager', desc: 'Objects, fields, rules & page layouts' },
-  { id: 'access', label: 'Users & Access', desc: 'Profiles & permission sets' },
+  { id: 'objects', label: 'Data Model', desc: 'Modules, fields, rules & form layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Roles & access packs' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
@@ -91,7 +91,7 @@ export default function MarketingSetupPage() {
 
   return (
     <>
-      <PageHeader title="Setup" subtitle="Marketing" />
+      <PageHeader title="Settings" subtitle="Marketing" />
       <div className="flex">
         <aside className="w-64 bg-white border-r border-[#D6E5EC] min-h-[calc(100vh-7rem)]">
           <div className="p-3 text-xs uppercase tracking-wide text-[#94A8B8] font-semibold">

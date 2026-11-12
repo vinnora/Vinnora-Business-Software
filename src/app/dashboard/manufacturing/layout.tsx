@@ -17,7 +17,7 @@ const NAV = [
   { href: '/dashboard/manufacturing/purchase-requisitions', label: 'Requisitions', icon: 'cart' },
   { href: '/dashboard/manufacturing/traceability', label: 'Traceability', icon: 'link' },
   { href: '/dashboard/manufacturing/analytics', label: 'Analytics', icon: 'chart' },
-  { href: '/dashboard/manufacturing/setup', label: 'Setup', icon: 'gear' },
+  { href: '/dashboard/manufacturing/setup', label: 'Settings', icon: 'gear' },
 ];
 
 function Icon({ name, className = 'h-5 w-5' }: { name: string; className?: string }) {

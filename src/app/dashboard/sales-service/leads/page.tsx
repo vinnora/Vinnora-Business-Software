@@ -58,13 +58,13 @@ export default function LeadsPage() {
   };
 
   const convert = async (leadId: string, name: string) => {
-    if (!confirm(`Convert ${name} to Account + Contact + Opportunity?`)) return;
+    if (!confirm(`Convert ${name} to Company + Person + Deal?`)) return;
     await actionError.run(() => api(API, { body: { action: 'convert', leadId } }));
     reload();
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this lead?')) return;
+    if (!confirm('Delete this enquiry?')) return;
     await actionError.run(() => api(`${API}?id=${id}`, { method: 'DELETE' }));
     reload();
   };
@@ -72,7 +72,7 @@ export default function LeadsPage() {
   return (
     <>
       <PageHeader
-        title="Leads"
+        title="Enquiries"
         subtitle="Sales"
         count={items.length}
         actions={
@@ -102,7 +102,7 @@ export default function LeadsPage() {
                 onClick={() => setEditing('new')}
                 className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
               >
-                + New Lead
+                + New Enquiry
               </button>
             )}
           </>
@@ -137,7 +137,7 @@ export default function LeadsPage() {
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">No leads yet.</td>
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">No enquiries yet.</td>
                 </tr>
               ) : (
                 items.map((l) => (

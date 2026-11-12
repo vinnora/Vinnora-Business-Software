@@ -61,20 +61,20 @@ type Member = { _id: string; name: string; email: string; orgRole: string };
 
 const TYPE_LABEL = { developer: 'Developer', partial: 'Partial Copy', full: 'Full Copy' };
 const TYPE_HELP = {
-  developer: 'Configuration only — objects, fields, rules, layouts, profiles, permission sets and public reports. No records.',
-  partial: 'Configuration plus a sample of the most recent records of each connected object.',
-  full: 'Configuration plus every record of each connected object.',
+  developer: 'Configuration only — modules, fields, rules, form layouts, roles, access packs and public reports. No records.',
+  partial: 'Configuration plus a sample of the most recent records of each connected module.',
+  full: 'Configuration plus every record of each connected module.',
 };
 const COMPONENT_LABELS: Record<string, string> = {
-  object: 'Custom Objects',
+  object: 'Custom Modules',
   field: 'Fields',
-  profile: 'Profiles',
-  permissionSet: 'Permission Sets',
-  permissionSetGroup: 'Permission Set Groups',
-  validationRule: 'Validation Rules',
-  restrictionRule: 'Restriction Rules',
-  layout: 'Page Layouts',
-  layoutAssignment: 'Layout Assignments',
+  profile: 'Roles',
+  permissionSet: 'Access Packs',
+  permissionSetGroup: 'Access Pack Groups',
+  validationRule: 'Check Rules',
+  restrictionRule: 'Record Filters',
+  layout: 'Form Layouts',
+  layoutAssignment: 'Form Layout Assignments',
   report: 'Reports',
   dashboard: 'Dashboards',
 };
@@ -95,7 +95,7 @@ export function SandboxesPanel() {
         active={tab}
         onChange={setTab}
         tabs={[
-          { id: 'sandboxes', label: 'Sandboxes' },
+          { id: 'sandboxes', label: 'Test Workspaces' },
           { id: 'history', label: 'Deployment History' },
         ]}
       />
@@ -134,29 +134,29 @@ function SandboxList({ onDeploy }: { onDeploy: (s: SandboxRow) => void }) {
   return (
     <div>
       <SectionTitle
-        title="Sandboxes"
-        subtitle="Build and test configuration changes away from production, then compare and deploy them. Only Sales & Service and custom objects are sandboxed; other apps are unavailable while you're in a sandbox."
+        title="Test Workspaces"
+        subtitle="Build and test configuration changes away from production, then compare and deploy them. Only Sell & Support and custom modules are copied; other apps are unavailable while you're in a test workspace."
         actions={
           <Btn variant="primary" onClick={() => setCreating(true)}>
-            + New Sandbox
+            + New Test Workspace
           </Btn>
         }
       />
       <ErrorBanner error={error || actionError} />
       {env?.current && (
         <p className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded p-2 mb-3">
-          You&apos;re currently in the sandbox <b>{env.current.name}</b>. Sandboxes are managed from production, but you can manage them here too.
+          You&apos;re currently in the test workspace <b>{env.current.name}</b>. Test workspaces are managed from production, but you can manage them here too.
         </p>
       )}
       {loading && !data ? (
         <Loading />
       ) : !data?.length ? (
-        <Empty>No sandboxes yet. Create one to try changes safely before they reach your team.</Empty>
+        <Empty>No test workspaces yet. Create one to try changes safely before they reach your team.</Empty>
       ) : (
         <Table
           head={
             <tr>
-              <th className={th}>Sandbox</th>
+              <th className={th}>Test Workspace</th>
               <th className={th}>Type</th>
               <th className={th}>Status</th>
               <th className={th}>Last copied</th>
@@ -254,7 +254,7 @@ function NewSandboxModal({ onClose, onCreated }: { onClose: () => void; onCreate
     <Modal
       open
       onClose={onClose}
-      title="New Sandbox"
+      title="New Test Workspace"
       footer={
         <>
           <Btn onClick={onClose} disabled={saving}>
@@ -287,7 +287,7 @@ function NewSandboxModal({ onClose, onCreated }: { onClose: () => void; onCreate
         ))}
       </div>
       {form.type === 'partial' && (
-        <FormField label="Records per object">
+        <FormField label="Records per module">
           <Input type="number" className="!w-32" min={1} max={10000} value={form.sampleSize} onChange={(e) => setForm({ ...form, sampleSize: Number(e.target.value) })} />
         </FormField>
       )}
@@ -329,8 +329,8 @@ function AccessModal({ sandbox, onClose, onSaved }: { sandbox: SandboxRow; onClo
     >
       <ErrorBanner error={error} />
       <p className="text-sm text-gray-600 mb-3">
-        The workspace owner, admins and the sandbox creator always have access. Inside the sandbox, people keep the profile and permission sets
-        they had when it was copied (change them in the sandbox&apos;s own Setup → Users).
+        The workspace owner, admins and the test workspace creator always have access. Inside the test workspace, people keep the role and access packs
+        they had when it was copied (change them in the test workspace&apos;s own Settings → Users).
       </p>
       <div className="space-y-2">
         {(users || [])
@@ -379,7 +379,7 @@ function DeleteModal({ sandbox, onClose, onDeleted }: { sandbox: SandboxRow; onC
     >
       <ErrorBanner error={error} />
       <p className="text-sm text-gray-600 mb-3">
-        Permanently deletes the sandbox with all of its configuration and records. Production is not affected. Type <b>{sandbox.name}</b> to
+        Permanently deletes the test workspace with all of its configuration and records. Production is not affected. Type <b>{sandbox.name}</b> to
         confirm.
       </p>
       <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={sandbox.name} />
@@ -459,7 +459,7 @@ function DeployView({ sandbox, onBack }: { sandbox: SandboxRow; onBack: () => vo
       </button>
       <SectionTitle
         title={`Deploy from ${sandbox.name} to Production`}
-        subtitle="Every configuration difference between the sandbox and production. Tick what to deploy, validate, then deploy. Records are never deployed."
+        subtitle="Every configuration difference between the test workspace and production. Tick what to deploy, validate, then deploy. Records are never deployed."
         actions={
           <>
             <Btn onClick={reload}>Refresh comparison</Btn>
@@ -523,9 +523,9 @@ function DeployView({ sandbox, onBack }: { sandbox: SandboxRow; onBack: () => vo
         </span>
       </div>
       {loading && !diff ? (
-        <Loading label="Comparing sandbox with production…" />
+        <Loading label="Comparing test workspace with production…" />
       ) : !diff?.length ? (
-        <Empty>No differences — the sandbox matches production.</Empty>
+        <Empty>No differences — the test workspace matches production.</Empty>
       ) : (
         <div className="space-y-4">
           {[...grouped.entries()].map(([type, list]) => (
@@ -564,7 +564,7 @@ function DeployView({ sandbox, onBack }: { sandbox: SandboxRow; onBack: () => vo
                         ))}
                       </td>
                       <td className={td}>
-                        {d.action === 'add' ? <Badge tone="green">New in sandbox</Badge> : d.action === 'change' ? <Badge tone="blue">Changed</Badge> : <Badge tone="red">Delete from production</Badge>}
+                        {d.action === 'add' ? <Badge tone="green">New in test workspace</Badge> : d.action === 'change' ? <Badge tone="blue">Changed</Badge> : <Badge tone="red">Delete from production</Badge>}
                       </td>
                       <td className={`${td} text-right`}>
                         <button type="button" className="text-xs text-[var(--p-accent)] hover:underline" onClick={() => setViewing(d)}>
@@ -652,14 +652,14 @@ function DiffModal({ item, onClose }: { item: DiffItem; onClose: () => void }) {
   );
   const fmt = (v: unknown) => (v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v, null, 2));
   return (
-    <Modal open onClose={onClose} size="xl" title={`${item.label} — ${item.action === 'add' ? 'new in sandbox' : item.action === 'change' ? 'changed' : 'only in production'}`}>
+    <Modal open onClose={onClose} size="xl" title={`${item.label} — ${item.action === 'add' ? 'new in test workspace' : item.action === 'change' ? 'changed' : 'only in production'}`}>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="bg-gray-50 text-gray-600">
             <tr>
               <th className="text-left px-2 py-1.5 w-40">Property</th>
               <th className="text-left px-2 py-1.5">Production</th>
-              <th className="text-left px-2 py-1.5">Sandbox</th>
+              <th className="text-left px-2 py-1.5">Test Workspace</th>
             </tr>
           </thead>
           <tbody>

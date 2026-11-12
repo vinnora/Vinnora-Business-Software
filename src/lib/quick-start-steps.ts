@@ -106,16 +106,16 @@ export const QUICK_START: Record<string, ModuleQuickStart> = {
     accentTo: '#5A7A8C',
     steps: [
       {
-        title: 'Import leads and build segments',
-        body: 'Bring your Leads in and group them into Audience Segments. Segments power every campaign, email and automation downstream.',
+        title: 'Import enquiries and build segments',
+        body: 'Bring your Enquiries in and group them into Audience Segments. Segments power every promotion, email and automation downstream.',
       },
       {
         title: 'Create email and SMS templates',
         body: 'Draft reusable Email templates and SMS messages so you are not rewriting copy for every send.',
       },
       {
-        title: 'Launch a campaign',
-        body: 'Open Campaigns to combine a segment with templates and schedule your first send. Events and Surveys are available when you need richer touchpoints.',
+        title: 'Launch a promotion',
+        body: 'Open Promotions to combine a segment with templates and schedule your first send. Events and Surveys are available when you need richer touchpoints.',
       },
       {
         title: 'Automate and measure',
@@ -124,25 +124,25 @@ export const QUICK_START: Record<string, ModuleQuickStart> = {
     ],
   },
   'sales-service': {
-    name: 'Sales & Service',
+    name: 'Sell & Support',
     accentFrom: '#012A4A',
     accentTo: '#0096C7',
     steps: [
       {
-        title: 'Add accounts and contacts',
-        body: 'Start with Accounts (companies) and Contacts (people). This is the foundation every lead, opportunity and case connects back to.',
+        title: 'Add companies and people',
+        body: 'Start with Companies and People. This is the foundation every enquiry, deal and ticket connects back to.',
       },
       {
-        title: 'Capture leads and qualify',
-        body: 'Log inbound Leads, qualify them, then convert promising ones into Opportunities tied to an account.',
+        title: 'Capture enquiries and qualify',
+        body: 'Log inbound Enquiries, qualify them, then convert promising ones into Deals tied to a company.',
       },
       {
-        title: 'Work opportunities through the pipeline',
-        body: 'Move Opportunities through stages, log Activities along the way, and close the deal when ready.',
+        title: 'Work deals through the pipeline',
+        body: 'Move Deals through deal stages, log Follow-ups along the way, and close the deal when ready.',
       },
       {
-        title: 'Support customers with cases',
-        body: 'After the sale, use Cases, Knowledge articles and Field Service work orders to keep customers happy and track every interaction.',
+        title: 'Support customers with tickets',
+        body: 'After the sale, use Tickets, Help Library articles and Field job cards to keep customers happy and track every interaction.',
       },
     ],
   },

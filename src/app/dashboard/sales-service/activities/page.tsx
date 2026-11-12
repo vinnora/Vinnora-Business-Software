@@ -19,6 +19,15 @@ type Activity = {
 };
 
 const TYPES = ['Call', 'Email', 'Meeting', 'Task', 'Note'];
+// Display names for stored values (stored values stay unchanged).
+const TYPE_LABELS: Record<string, string> = { Task: 'To-do' };
+const RELATED_LABELS: Record<string, string> = {
+  Account: 'Company',
+  Contact: 'Person',
+  Lead: 'Enquiry',
+  Opportunity: 'Deal',
+  Case: 'Ticket',
+};
 const STATUSES = ['Open', 'In Progress', 'Completed', 'Cancelled'];
 const PRIORITIES = ['Low', 'Normal', 'High'];
 
@@ -84,7 +93,7 @@ export default function ActivitiesPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this activity?')) return;
+    if (!confirm('Delete this follow-up?')) return;
     await fetch(`/api/sales-service/activities?id=${id}`, { method: 'DELETE' });
     load();
   };
@@ -102,7 +111,7 @@ export default function ActivitiesPage() {
   return (
     <>
       <PageHeader
-        title="Activities"
+        title="Follow-ups"
         subtitle="Timeline"
         count={items.length}
         actions={
@@ -114,14 +123,14 @@ export default function ActivitiesPage() {
             >
               <option value="">All types</option>
               {TYPES.map((t) => (
-                <option key={t}>{t}</option>
+                <option key={t} value={t}>{TYPE_LABELS[t] || t}</option>
               ))}
             </select>
             <button
               onClick={() => setOpen(true)}
               className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
             >
-              + Log Activity
+              + Log Follow-up
             </button>
           </>
         }
@@ -132,7 +141,7 @@ export default function ActivitiesPage() {
           <div className="text-sm text-gray-500">Loading…</div>
         ) : items.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-lg p-12 text-center text-gray-500">
-            No activities yet. Click <strong>+ Log Activity</strong> to record one.
+            No follow-ups yet. Click <strong>+ Log Follow-up</strong> to record one.
           </div>
         ) : (
           <div className="space-y-6">
@@ -152,7 +161,7 @@ export default function ActivitiesPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-gray-900">{a.subject}</span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${TYPE_COLORS[a.type]}`}>
-                            {a.type}
+                            {TYPE_LABELS[a.type] || a.type}
                           </span>
                           {a.status === 'Completed' && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-800">
@@ -162,7 +171,7 @@ export default function ActivitiesPage() {
                         </div>
                         {a.relatedToName && (
                           <div className="text-xs text-gray-500 mt-0.5">
-                            Related to {a.relatedToType}: <span className="text-[#0176d3]">{a.relatedToName}</span>
+                            Related to {(a.relatedToType && RELATED_LABELS[a.relatedToType]) || a.relatedToType}: <span className="text-[#0176d3]">{a.relatedToName}</span>
                           </div>
                         )}
                         {a.description && (
@@ -194,7 +203,7 @@ export default function ActivitiesPage() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Log Activity"
+        title="Log Follow-up"
         footer={
           <>
             <button onClick={() => setOpen(false)} className="px-3 py-1.5 text-sm border border-gray-300 rounded">
@@ -210,7 +219,7 @@ export default function ActivitiesPage() {
           <Field label="Type">
             <SelectInput value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
               {TYPES.map((t) => (
-                <option key={t}>{t}</option>
+                <option key={t} value={t}>{TYPE_LABELS[t] || t}</option>
               ))}
             </SelectInput>
           </Field>

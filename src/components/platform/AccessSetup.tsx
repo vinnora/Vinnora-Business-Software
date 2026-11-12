@@ -52,12 +52,12 @@ export function AccessSetup({ theme, initialTab = 'users' }: { theme?: PlatformT
         onChange={setTab}
         tabs={[
           { id: 'users', label: 'Users' },
-          { id: 'profiles', label: 'Profiles' },
-          { id: 'permissionSets', label: 'Permission Sets' },
-          { id: 'groups', label: 'Permission Set Groups' },
-          { id: 'objects', label: 'Object Manager' },
-          { id: 'dataLoader', label: 'Data Loader' },
-          { id: 'sandboxes', label: 'Sandboxes & Deployments' },
+          { id: 'profiles', label: 'Roles' },
+          { id: 'permissionSets', label: 'Access Packs' },
+          { id: 'groups', label: 'Access Pack Groups' },
+          { id: 'objects', label: 'Data Model' },
+          { id: 'dataLoader', label: 'Import & Export' },
+          { id: 'sandboxes', label: 'Test Workspaces & Deployments' },
         ]}
       />
       <div className="pt-5">
@@ -104,7 +104,7 @@ function UsersPanel() {
     <div>
       <SectionTitle
         title="Users"
-        subtitle="Each user has one profile plus any number of permission sets and permission set groups. Invite people from your workspace settings."
+        subtitle="Each user has one role plus any number of access packs and access pack groups. Invite people from your workspace settings."
       />
       <ErrorBanner error={users.error || error} />
       {users.loading && !users.data ? (
@@ -116,9 +116,9 @@ function UsersPanel() {
           head={
             <tr>
               <th className={th}>User</th>
+              <th className={th}>Workspace Role</th>
               <th className={th}>Role</th>
-              <th className={th}>Profile</th>
-              <th className={th}>Permission Sets &amp; Groups</th>
+              <th className={th}>Access Packs &amp; Groups</th>
               <th className={th}></th>
             </tr>
           }
@@ -146,7 +146,7 @@ function UsersPanel() {
                   </Select>
                 )}
                 {!u.profileAssigned && u.orgRole !== 'owner' && (
-                  <div className="text-[11px] text-gray-500 mt-0.5">From role: {profileName(u.profileId)}</div>
+                  <div className="text-[11px] text-gray-500 mt-0.5">From workspace role: {profileName(u.profileId)}</div>
                 )}
               </td>
               <td className={td}>
@@ -232,9 +232,9 @@ function AssignmentsModal({
       }
     >
       <ErrorBanner error={error} />
-      <h3 className="text-sm font-semibold mb-2">Permission Sets</h3>
+      <h3 className="text-sm font-semibold mb-2">Access Packs</h3>
       {sets.length === 0 ? (
-        <p className="text-xs text-gray-500 mb-4">No permission sets yet.</p>
+        <p className="text-xs text-gray-500 mb-4">No access packs yet.</p>
       ) : (
         <div className="grid sm:grid-cols-2 gap-2 mb-4">
           {sets.map((s) => (
@@ -247,7 +247,7 @@ function AssignmentsModal({
           ))}
         </div>
       )}
-      <h3 className="text-sm font-semibold mb-2">Permission Set Groups</h3>
+      <h3 className="text-sm font-semibold mb-2">Access Pack Groups</h3>
       {groups.length === 0 ? (
         <p className="text-xs text-gray-500">No groups yet.</p>
       ) : (
@@ -287,7 +287,7 @@ function ProfilesPanel() {
   }
 
   const remove = async (p: ProfileDTO) => {
-    if (!window.confirm(`Delete profile "${p.name}"?`)) return;
+    if (!window.confirm(`Delete role "${p.name}"?`)) return;
     setActionError(null);
     try {
       await api(`/api/platform/profiles/${p._id}`, { method: 'DELETE' });
@@ -300,8 +300,8 @@ function ProfilesPanel() {
   return (
     <div>
       <SectionTitle
-        title="Profiles"
-        subtitle="A profile is a user's baseline access: apps, object permissions, field-level security and system permissions. Create new profiles by cloning."
+        title="Roles"
+        subtitle="A role is a user's baseline access: apps, module permissions, field-level security and system permissions. Create new roles by cloning."
       />
       <ErrorBanner error={error || actionError || objects.error} />
       {loading && !data ? (
@@ -310,7 +310,7 @@ function ProfilesPanel() {
         <Table
           head={
             <tr>
-              <th className={th}>Profile</th>
+              <th className={th}>Role</th>
               <th className={th}>Users</th>
               <th className={th}></th>
             </tr>
@@ -431,7 +431,7 @@ function PermissionSetsPanel() {
   }
 
   const remove = async (s: PermissionSetDTO) => {
-    if (!window.confirm(`Delete permission set "${s.name}"? It will be removed from ${s.userCount ?? 0} user(s).`)) return;
+    if (!window.confirm(`Delete access pack "${s.name}"? It will be removed from ${s.userCount ?? 0} user(s).`)) return;
     setActionError(null);
     try {
       await api(`/api/platform/permission-sets/${s._id}`, { method: 'DELETE' });
@@ -444,11 +444,11 @@ function PermissionSetsPanel() {
   return (
     <div>
       <SectionTitle
-        title="Permission Sets"
-        subtitle="Grant extra access to specific users without changing their profile — e.g. 'Delete Opportunities' or 'Inventory Access'."
+        title="Access Packs"
+        subtitle="Grant extra access to specific users without changing their role — e.g. 'Delete Deals' or 'Inventory Access'."
         actions={
           <Btn variant="primary" onClick={() => setCreating(true)}>
-            + New Permission Set
+            + New Access Pack
           </Btn>
         }
       />
@@ -456,12 +456,12 @@ function PermissionSetsPanel() {
       {loading && !data ? (
         <Loading />
       ) : !data?.length ? (
-        <Empty>No permission sets yet.</Empty>
+        <Empty>No access packs yet.</Empty>
       ) : (
         <Table
           head={
             <tr>
-              <th className={th}>Permission Set</th>
+              <th className={th}>Access Pack</th>
               <th className={th}>API Name</th>
               <th className={th}>Users</th>
               <th className={th}></th>
@@ -489,7 +489,7 @@ function PermissionSetsPanel() {
       )}
       {creating && (
         <NameModal
-          title="New Permission Set"
+          title="New Access Pack"
           onClose={() => setCreating(false)}
           onSave={async (name, description) => {
             const s = await api<PermissionSetDTO>('/api/platform/permission-sets', { body: { name, description } });
@@ -526,8 +526,8 @@ function GroupsPanel() {
   return (
     <div>
       <SectionTitle
-        title="Permission Set Groups"
-        subtitle="Bundle permission sets for a job role (e.g. 'Sales Manager') and assign them in one go."
+        title="Access Pack Groups"
+        subtitle="Bundle access packs for a job (e.g. 'Sales Manager') and assign them in one go."
         actions={
           <Btn variant="primary" onClick={() => setEditing({ name: '', apiName: '', description: '', permissionSetIds: [] })}>
             + New Group
@@ -538,13 +538,13 @@ function GroupsPanel() {
       {loading && !data ? (
         <Loading />
       ) : !data?.length ? (
-        <Empty>No permission set groups yet.</Empty>
+        <Empty>No access pack groups yet.</Empty>
       ) : (
         <Table
           head={
             <tr>
               <th className={th}>Group</th>
-              <th className={th}>Permission Sets</th>
+              <th className={th}>Access Packs</th>
               <th className={th}>Users</th>
               <th className={th}></th>
             </tr>
@@ -619,7 +619,7 @@ function GroupModal({
     <Modal
       open
       onClose={onClose}
-      title={form._id ? `Edit ${group.name}` : 'New Permission Set Group'}
+      title={form._id ? `Edit ${group.name}` : 'New Access Pack Group'}
       footer={
         <>
           <Btn onClick={onClose}>Cancel</Btn>
@@ -636,9 +636,9 @@ function GroupModal({
       <FormField label="Description">
         <TextArea rows={2} value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
       </FormField>
-      <h3 className="text-sm font-semibold mb-2">Included permission sets</h3>
+      <h3 className="text-sm font-semibold mb-2">Included access packs</h3>
       {sets.length === 0 ? (
-        <p className="text-xs text-gray-500">Create permission sets first.</p>
+        <p className="text-xs text-gray-500">Create access packs first.</p>
       ) : (
         <div className="grid sm:grid-cols-2 gap-2">
           {sets.map((s) => (

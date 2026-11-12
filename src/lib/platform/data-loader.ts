@@ -51,17 +51,17 @@ export async function connectedAccess(ctx: AuthContext, objectApiName: string): 
   if (!objectApiName || typeof objectApiName !== 'string') throw new BadRequestError('objectApiName is required');
   const std = getStandardObject(objectApiName);
   if (std && !std.enforced) {
-    throw new BadRequestError(`${std.pluralLabel} aren't connected to the platform yet and can't be used with the Data Loader.`);
+    throw new BadRequestError(`${std.pluralLabel} aren't connected to the platform yet and can't be used with Import & Export.`);
   }
   let access: ObjectAccess;
   try {
     access = await getObjectAccess(ctx, std ? std.apiName : objectApiName);
   } catch (e) {
-    if (e instanceof NotFoundError) throw new BadRequestError(`Object ${objectApiName} not found.`);
+    if (e instanceof NotFoundError) throw new BadRequestError(`Module ${objectApiName} not found.`);
     throw e;
   }
   if (!access.object.enforced) {
-    throw new BadRequestError(`${access.object.pluralLabel} aren't connected to the platform yet and can't be used with the Data Loader.`);
+    throw new BadRequestError(`${access.object.pluralLabel} aren't connected to the platform yet and can't be used with Import & Export.`);
   }
   return access;
 }
@@ -69,7 +69,7 @@ export async function connectedAccess(ctx: AuthContext, objectApiName: string): 
 export function modelFor(access: ObjectAccess): RecordModel {
   if (access.object.isCustom) return CustomRecord as RecordModel;
   const model = getStandardObject(access.object.apiName)?.model;
-  if (!model) throw new BadRequestError('Unknown object');
+  if (!model) throw new BadRequestError('Unknown module');
   return model;
 }
 
@@ -439,7 +439,7 @@ export async function exportRecords(ctx: AuthContext, objectApiName: string, opt
     for (const c of filters) {
       const f = access.field(c.field);
       if (!f || !readableSet.has(c.field)) throw new BadRequestError(`Can't filter on ${c.field}.`);
-      if (f.type === 'formula') throw new BadRequestError(`Formula fields (${f.label}) can't be used in export filters.`);
+      if (f.type === 'formula') throw new BadRequestError(`Calculated fields (${f.label}) can't be used in export filters.`);
     }
     try {
       filter = conditionsToMongo(filters, opts.filterLogic || undefined, fieldsByApi(access.object), access.perms.userTokens);

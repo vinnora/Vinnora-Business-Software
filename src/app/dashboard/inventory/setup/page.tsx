@@ -14,6 +14,7 @@ import {
 } from '../_components/ui';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
 import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
+import { APP_LABELS } from '@/lib/platform/types';
 
 type Tab =
   | 'picklists'
@@ -28,7 +29,7 @@ type Tab =
   | 'objects' | 'access' | 'subscription';
 
 const TABS: { id: Tab; label: string; desc: string }[] = [
-  { id: 'picklists', label: 'Picklists', desc: 'Categories, brands, units, statuses' },
+  { id: 'picklists', label: 'Dropdowns', desc: 'Categories, brands, units, statuses' },
   { id: 'reorder-rules', label: 'Reorder Rules', desc: 'Auto-create POs when stock is low' },
   { id: 'workflows', label: 'Workflows', desc: 'Automate inventory events' },
   { id: 'units', label: 'Units of Measure', desc: 'Custom units for items' },
@@ -37,8 +38,8 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
   { id: 'eway-defaults', label: 'E-Way Defaults', desc: 'Default consignor / GSTIN' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
-  { id: 'objects', label: 'Object Manager', desc: 'Objects, fields, rules & page layouts' },
-  { id: 'access', label: 'Users & Access', desc: 'Profiles & permission sets' },
+  { id: 'objects', label: 'Data Model', desc: 'Modules, fields, rules & layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Roles & access packs' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
@@ -47,7 +48,7 @@ export default function InventorySetupPage() {
 
   return (
     <>
-      <PageHeader title="Setup" subtitle="Customize Inventory" />
+      <PageHeader title="Settings" subtitle="Customize Inventory" />
       <div className="flex">
         <aside className="w-64 bg-white border-r border-[#FFE5C4] min-h-[calc(100vh-7rem)]">
           <div className="p-3 text-xs uppercase tracking-wide text-[#A0522D] font-semibold">
@@ -87,7 +88,7 @@ export default function InventorySetupPage() {
   );
 }
 
-/* -------------------- Picklists -------------------- */
+/* -------------------- Dropdowns (picklists) -------------------- */
 
 const PICKLIST_KEYS = [
   { key: 'item.category', label: 'Item Categories' },
@@ -149,7 +150,7 @@ function PicklistsTab({ keyOverride, title }: { keyOverride?: string; title?: st
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-[#4A1D0F] mb-1">{title || 'Picklist Values'}</h2>
+      <h2 className="text-lg font-semibold text-[#4A1D0F] mb-1">{title || 'Dropdown Values'}</h2>
       <p className="text-sm text-[#A0522D] mb-4">
         Customize dropdown options used across the inventory module.
       </p>
@@ -603,7 +604,7 @@ function WorkflowsTab() {
           <TextInput value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Object">
+          <Field label="Module">
             <SelectInput value={form.objectType} onChange={(e) => setForm({ ...form, objectType: e.target.value })}>
               {WORKFLOW_OBJECTS.map((o) => <option key={o}>{o}</option>)}
             </SelectInput>
@@ -868,8 +869,8 @@ function InvConnectionsTab() {
                     <div className="font-medium text-[#4A1D0F]">{c.name}</div>
                     {c.description && <div className="text-[10px] text-[#A0522D]">{c.description}</div>}
                   </td>
-                  <td className="px-4 py-2 text-xs text-[#6B2410]">{c.sourceApp} / {c.sourceObject} / {c.sourceEvent}</td>
-                  <td className="px-4 py-2 text-xs text-[#6B2410]">{c.targetApp} / {c.targetAction}</td>
+                  <td className="px-4 py-2 text-xs text-[#6B2410]">{(APP_LABELS as Record<string, string>)[c.sourceApp] ?? c.sourceApp} / {c.sourceObject} / {c.sourceEvent}</td>
+                  <td className="px-4 py-2 text-xs text-[#6B2410]">{(APP_LABELS as Record<string, string>)[c.targetApp] ?? c.targetApp} / {c.targetAction}</td>
                   <td className="px-4 py-2 text-center">
                     <button onClick={() => toggle(c)} className={`px-2 py-0.5 text-xs rounded ${c.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>{c.active ? 'ON' : 'OFF'}</button>
                   </td>

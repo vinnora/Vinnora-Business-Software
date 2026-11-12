@@ -79,18 +79,18 @@ export function validateCustomField(
   }
   if (type === 'picklist' || type === 'multipicklist') {
     out.picklistValues = cleanPicklist(body.picklistValues);
-    if (!out.picklistValues.length) throw new BadRequestError('Add at least one picklist value');
+    if (!out.picklistValues.length) throw new BadRequestError('Add at least one dropdown value');
     out.restrictedPicklist = body.restrictedPicklist !== false;
   }
   if (type === 'lookup') {
     const ref = String(body.referenceTo ?? '');
-    if (!knownObjects.includes(ref)) throw new BadRequestError('Choose the object this lookup points to');
+    if (!knownObjects.includes(ref)) throw new BadRequestError('Choose the module this link points to');
     out.referenceTo = ref;
   }
   if (type === 'formula') {
     const formula = String(body.formula ?? '').trim();
     const rt = String(body.returnType ?? 'text');
-    if (!RETURN_TYPES.includes(rt)) throw new BadRequestError('Choose a formula return type');
+    if (!RETURN_TYPES.includes(rt)) throw new BadRequestError('Choose a calculated field return type');
     const check = checkFormula(formula, object.fields.map((f) => f.apiName));
     if (!check.ok) throw new BadRequestError(`Formula error: ${check.error}`);
     out.formula = formula;

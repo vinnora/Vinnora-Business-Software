@@ -10,7 +10,7 @@ type P = { id: string };
 export const POST = route<P>(async (req, { id }) => {
   const { ctx, prodTenant } = await productionContext('manageSandboxes');
   const sbx = await loadSandbox(ctx, id);
-  if (sbx.status === 'creating') throw new BadRequestError('This sandbox is already being copied.');
+  if (sbx.status === 'creating') throw new BadRequestError('This test workspace is already being copied.');
   const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
   if (['developer', 'partial', 'full'].includes(String(body.type))) sbx.type = body.type as typeof sbx.type;
   if (body.sampleSize) sbx.sampleSize = Math.min(Math.max(Number(body.sampleSize) || 100, 1), 10000);

@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(article, { status: 201 });
   } catch (error) {
     console.error('Error creating article:', error);
-    return NextResponse.json({ error: 'Failed to create article' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create help article' }, { status: 500 });
   }
 }
 
@@ -84,7 +84,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(article);
   } catch (error) {
     console.error('Error updating article:', error);
-    return NextResponse.json({ error: 'Failed to update article' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update help article' }, { status: 500 });
   }
 }
 
@@ -98,6 +98,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting article:', error);
-    return NextResponse.json({ error: 'Failed to delete article' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete help article' }, { status: 500 });
   }
 }

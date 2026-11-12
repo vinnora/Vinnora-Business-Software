@@ -98,7 +98,7 @@ export async function getAuthContext(app?: AppKey): Promise<AuthContext> {
 
   const org = await Organization.findById(user.orgId);
   if (!org) {
-    throw new Error('Organization not found');
+    throw new Error('Workspace not found');
   }
 
   const orgRole = (user.orgRole || 'member') as OrgRole;

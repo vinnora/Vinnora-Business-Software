@@ -43,7 +43,7 @@ export default function ContactsPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this contact?')) return;
+    if (!confirm('Delete this person?')) return;
     await actionError.run(() => api(`${API}?id=${id}`, { method: 'DELETE' }));
     reload();
   };
@@ -51,7 +51,7 @@ export default function ContactsPage() {
   return (
     <>
       <PageHeader
-        title="Contacts"
+        title="People"
         subtitle="Sales"
         count={items.length}
         actions={
@@ -60,7 +60,7 @@ export default function ContactsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applySearch()}
-              placeholder="Search contacts…"
+              placeholder="Search people…"
               className="px-3 py-1.5 text-sm border border-gray-300 rounded focus:border-[#0176d3] focus:outline-none"
             />
             {canCreate && (
@@ -84,7 +84,7 @@ export default function ContactsPage() {
               <tr>
                 <th className="text-left px-4 py-2.5">Name</th>
                 <th className="text-left px-4 py-2.5">Title</th>
-                <th className="text-left px-4 py-2.5">Account</th>
+                <th className="text-left px-4 py-2.5">Company</th>
                 <th className="text-left px-4 py-2.5">Email</th>
                 <th className="text-left px-4 py-2.5">Phone</th>
                 <th className="px-4 py-2.5"></th>
@@ -102,7 +102,7 @@ export default function ContactsPage() {
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                    No contacts yet.
+                    No people yet.
                   </td>
                 </tr>
               ) : (

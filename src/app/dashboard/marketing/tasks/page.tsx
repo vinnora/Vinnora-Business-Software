@@ -45,7 +45,7 @@ export default function TasksPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this task?')) return;
+    if (!confirm('Delete this to-do?')) return;
     await fetch(`/api/marketing/tasks?id=${id}`, { method: 'DELETE' }); load();
   };
 
@@ -56,14 +56,14 @@ export default function TasksPage() {
 
   return (
     <>
-      <PageHeader title="Tasks" subtitle="Marketing" count={items.length} actions={
+      <PageHeader title="To-dos" subtitle="Marketing" count={items.length} actions={
         <>
           <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && load()} placeholder="Search…" className="px-3 py-1.5 text-sm border border-[#D6E5EC] rounded focus:border-[#5A7A8C] focus:outline-none" />
           <div className="flex border border-[#D6E5EC] rounded overflow-hidden">
             <button onClick={() => setView('board')} className={`px-2 py-1.5 text-xs ${view === 'board' ? 'bg-[#5A7A8C] text-white' : 'text-[#5A7A8C]'}`}>Board</button>
             <button onClick={() => { setView('list'); setStatusFilter(''); }} className={`px-2 py-1.5 text-xs ${view === 'list' ? 'bg-[#5A7A8C] text-white' : 'text-[#5A7A8C]'}`}>List</button>
           </div>
-          <PrimaryButton onClick={() => { setEditing(null); setForm(emptyForm()); setOpen(true); }}>+ New Task</PrimaryButton>
+          <PrimaryButton onClick={() => { setEditing(null); setForm(emptyForm()); setOpen(true); }}>+ New To-do</PrimaryButton>
         </>
       } />
 
@@ -116,7 +116,7 @@ export default function TasksPage() {
               </thead>
               <tbody>
                 {items.length === 0 ? (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-[#94A8B8]">No tasks yet.</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-[#94A8B8]">No to-dos yet.</td></tr>
                 ) : items.map(t => (
                   <tr key={t._id} className="border-t border-[#E8F1F5] hover:bg-[#F4F9FB]">
                     <td className="px-4 py-2 font-medium text-[#3D5266]">{t.title}</td>
@@ -136,7 +136,7 @@ export default function TasksPage() {
         )}
       </div>
 
-      <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Edit Task' : 'New Task'} footer={<><SecondaryButton onClick={() => setOpen(false)}>Cancel</SecondaryButton><PrimaryButton onClick={save}>Save</PrimaryButton></>}>
+      <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Edit To-do' : 'New To-do'} footer={<><SecondaryButton onClick={() => setOpen(false)}>Cancel</SecondaryButton><PrimaryButton onClick={save}>Save</PrimaryButton></>}>
         <Field label="Title" required><TextInput value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Status"><SelectInput value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</SelectInput></Field>

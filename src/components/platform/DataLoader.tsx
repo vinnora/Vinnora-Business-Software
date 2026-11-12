@@ -150,8 +150,8 @@ export function DataLoader({ theme }: { theme?: PlatformTheme }) {
   return (
     <ThemeScope theme={theme}>
       <SectionTitle
-        title="Data Loader"
-        subtitle="Insert, update, upsert, delete and export records in bulk using CSV files. Permissions, field-level security and validation rules apply to every row."
+        title="Import & Export"
+        subtitle="Insert, update, upsert, delete and export records in bulk using CSV files. Permissions, field-level security and check rules apply to every row."
       />
       <Tabs<Tab>
         active={tab}
@@ -166,7 +166,7 @@ export function DataLoader({ theme }: { theme?: PlatformTheme }) {
         {meta.loading && !meta.data ? (
           <Loading />
         ) : meta.error || !meta.data ? (
-          <ErrorBanner error={meta.error || 'Could not load objects.'} />
+          <ErrorBanner error={meta.error || 'Could not load modules.'} />
         ) : (
           <>
             {tab === 'import' && <ImportWizard meta={meta.data} />}
@@ -184,7 +184,7 @@ export function DataLoader({ theme }: { theme?: PlatformTheme }) {
 /* ------------------------------------------------------------------ */
 
 type Step = 1 | 2 | 3 | 4 | 5;
-const STEP_LABELS = ['Choose object', 'Choose file', 'Map fields', 'Review', 'Results'];
+const STEP_LABELS = ['Choose module', 'Choose file', 'Map fields', 'Review', 'Results'];
 
 interface ParsedFile {
   name: string;
@@ -256,8 +256,8 @@ function ImportWizard({ meta }: { meta: ObjectsResponse }) {
   if (!meta.canImport) {
     return (
       <Notice tone="amber">
-        You need the <b>Import Data</b> permission to insert, update, upsert or delete records with the Data Loader. Ask your administrator to
-        add it to your profile or a permission set.
+        You need the <b>Import Data</b> permission to insert, update, upsert or delete records with Import & Export. Ask your administrator to
+        add it to your role or an access pack.
       </Notice>
     );
   }
@@ -275,7 +275,7 @@ function ImportWizard({ meta }: { meta: ObjectsResponse }) {
 
   /* ---- step 1 → 2 ---- */
   const chooseObject = async () => {
-    if (!objectApi) return setError('Choose an object.');
+    if (!objectApi) return setError('Choose a module.');
     setBusy(true);
     setError(null);
     try {
@@ -486,16 +486,16 @@ function ImportWizard({ meta }: { meta: ObjectsResponse }) {
               ))}
             </div>
           </FormField>
-          <FormField label="Object" help="Only objects connected to the platform that you have permission to change are listed.">
+          <FormField label="Module" help="Only modules connected to the platform that you have permission to change are listed.">
             <Select value={objectApi} onChange={(e) => setObjectApi(e.target.value)}>
-              <option value="">— Choose an object —</option>
+              <option value="">— Choose a module —</option>
               {objects.map((o) => (
                 <option key={o.apiName} value={o.apiName}>
                   {o.label} ({o.apiName})
                 </option>
               ))}
             </Select>
-            {!objects.length && <div className="text-xs text-gray-500 mt-1">You can&apos;t {operation} records in any connected object.</div>}
+            {!objects.length && <div className="text-xs text-gray-500 mt-1">You can&apos;t {operation} records in any connected module.</div>}
           </FormField>
           <div className="flex justify-end">
             <Btn variant="primary" disabled={!objectApi || busy} onClick={chooseObject}>
@@ -640,7 +640,7 @@ function ImportWizard({ meta }: { meta: ObjectsResponse }) {
           <dl className="grid grid-cols-[10rem_1fr] gap-y-2 text-sm mb-4">
             <dt className="text-gray-500">Operation</dt>
             <dd className="font-medium">{OP_LABEL[operation]}</dd>
-            <dt className="text-gray-500">Object</dt>
+            <dt className="text-gray-500">Module</dt>
             <dd className="font-medium">
               {object.pluralLabel} <span className="text-gray-400">({object.apiName})</span>
             </dd>
@@ -762,11 +762,11 @@ function ImportTips({ operation }: { operation: Operation }) {
       <div className="font-medium text-gray-700 mb-1">Formatting tips</div>
       <ul className="list-disc pl-4 space-y-0.5">
         <li>The first row must contain column headers. Columns named like a field&apos;s API name or label are mapped automatically.</li>
-        {operation !== 'insert' && <li>Record IDs go in a column called <code>Id</code> or <code>_id</code> (export the object first to get them).</li>}
-        <li>Lookup fields take record IDs, not names.</li>
+        {operation !== 'insert' && <li>Record IDs go in a column called <code>Id</code> or <code>_id</code> (export the module first to get them).</li>}
+        <li>Link fields take record IDs, not names.</li>
         <li>Dates: <code>YYYY-MM-DD</code>. Date/times: ISO 8601, e.g. <code>2025-03-31T14:30:00Z</code>.</li>
         <li>Checkboxes: <code>true</code> / <code>false</code> (also yes/no, 1/0).</li>
-        <li>Multi-select picklists: separate values with <code>;</code>, e.g. <code>Red;Blue</code>.</li>
+        <li>Multi-select fields: separate values with <code>;</code>, e.g. <code>Red;Blue</code>.</li>
         <li>Numbers without currency symbols; commas as thousands separators are ignored.</li>
         {operation !== 'insert' && (
           <li>
@@ -802,7 +802,7 @@ function ExportPanel({ meta }: { meta: ObjectsResponse }) {
   if (!meta.canExport) {
     return (
       <Notice tone="amber">
-        You need the <b>Export Data</b> permission to export records. Ask your administrator to add it to your profile or a permission set.
+        You need the <b>Export Data</b> permission to export records. Ask your administrator to add it to your role or an access pack.
       </Notice>
     );
   }
@@ -859,7 +859,7 @@ function ExportPanel({ meta }: { meta: ObjectsResponse }) {
     <div className="bg-white border border-[var(--p-border)] rounded p-5">
       <ErrorBanner error={error} />
       {done && <Notice>{done}</Notice>}
-      <FormField label="Object" className="max-w-md">
+      <FormField label="Module" className="max-w-md">
         <Select
           value={objectApi}
           onChange={(e) => {
@@ -870,7 +870,7 @@ function ExportPanel({ meta }: { meta: ObjectsResponse }) {
             setDone(null);
           }}
         >
-          <option value="">— Choose an object —</option>
+          <option value="">— Choose a module —</option>
           {meta.objects.map((o) => (
             <option key={o.apiName} value={o.apiName}>
               {o.label} ({o.apiName})
@@ -957,14 +957,14 @@ function HistoryPanel() {
         </Btn>
       </div>
       {!list.length ? (
-        <Empty>No Data Loader jobs yet.</Empty>
+        <Empty>No import or export jobs yet.</Empty>
       ) : (
         <Table
           head={
             <tr>
               <th className={th}>When</th>
               <th className={th}>User</th>
-              <th className={th}>Object</th>
+              <th className={th}>Module</th>
               <th className={th}>Operation</th>
               <th className={th}>File</th>
               <th className={`${th} text-right`}>Total</th>

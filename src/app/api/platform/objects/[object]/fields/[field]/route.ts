@@ -50,7 +50,7 @@ export const PATCH = route<P>(async (req, { object, field }) => {
     const extra = cleaned.filter((p) => !allowed.has(p.value));
     if (extra.length && current.restrictedPicklist) {
       throw new BadRequestError(
-        `Built-in picklist values can be relabelled, reordered or deactivated, but not added (${extra.map((p) => p.value).join(', ')}).`,
+        `Built-in dropdown values can be relabelled, reordered or deactivated, but not added (${extra.map((p) => p.value).join(', ')}).`,
       );
     }
     set.picklistValues = cleaned;
@@ -77,7 +77,7 @@ export const DELETE = route<P>(async (_req, { object, field }) => {
 
   const refs = describe.fields.filter((f) => f.type === 'formula' && f.formula && new RegExp(`\\b${field}\\b`, 'i').test(f.formula));
   if (refs.length) {
-    throw new BadRequestError(`Used by formula field(s): ${refs.map((f) => f.label).join(', ')}. Update them first.`);
+    throw new BadRequestError(`Used by calculated field(s): ${refs.map((f) => f.label).join(', ')}. Update them first.`);
   }
 
   await FieldDefinition.deleteOne({ orgId: tenant, objectApiName: describe.apiName, apiName: field, isOverride: { $ne: true } });

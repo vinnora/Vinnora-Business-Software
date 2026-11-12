@@ -40,7 +40,7 @@ export async function productionContext(...anyOf: SystemPermissionKey[]): Promis
   const full = await getAuthContext();
   const ctx: AuthContext = { ...full, sandbox: undefined };
   const perms = anyOf.length ? await requireSystemPermission(ctx, ...anyOf) : await getEffectivePermissions(ctx);
-  if (!full.orgId) throw new BadRequestError('Sandboxes need a workspace (organisation).');
+  if (!full.orgId) throw new BadRequestError('Test workspaces need a team workspace.');
   return { ctx: full, perms, tenant: perms.tenant, prodTenant: perms.tenant };
 }
 

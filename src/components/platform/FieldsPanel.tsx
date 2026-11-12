@@ -28,32 +28,40 @@ const TYPE_HELP: Record<FieldType, string> = {
   email: 'An email address (validated).',
   phone: 'A phone number.',
   url: 'A web address.',
-  lookup: 'Link to a record of another object.',
+  lookup: 'Link to a record of another module.',
   formula: 'Read-only value calculated from other fields.',
 };
 
 export function typeLabel(f: FieldDescribe): string {
-  if (f.type === 'lookup') return `Lookup(${f.referenceTo || '?'})`;
-  if (f.type === 'formula') return `Formula (${f.returnType || 'text'})`;
+  if (f.type === 'lookup') return `Link (${f.referenceTo || '?'})`;
+  if (f.type === 'formula') return `Calculated Field (${f.returnType || 'text'})`;
   if (['text', 'email', 'phone', 'url'].includes(f.type) && f.length) return `${FIELD_TYPE_LABELS[f.type]}(${f.length})`;
   return FIELD_TYPE_LABELS[f.type] || f.type;
 }
 
+const isPicklist = (f: FieldDescribe) => f.type === 'picklist' || f.type === 'multipicklist';
+
 export function FieldsPanel({ obj, onChanged }: { obj: ObjectDetail; onChanged: () => void }) {
   const [query, setQuery] = useState('');
+  const [picklistsOnly, setPicklistsOnly] = useState(false);
   const [wizard, setWizard] = useState(false);
   const [editing, setEditing] = useState<FieldDescribe | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const picklistCount = useMemo(() => obj.fields.filter(isPicklist).length, [obj.fields]);
   const rows = useMemo(() => {
     const q = query.toLowerCase();
-    return obj.fields.filter((f) => !q || f.label.toLowerCase().includes(q) || f.apiName.toLowerCase().includes(q));
-  }, [obj.fields, query]);
+    return obj.fields.filter(
+      (f) =>
+        (!picklistsOnly || isPicklist(f)) &&
+        (!q || f.label.toLowerCase().includes(q) || f.apiName.toLowerCase().includes(q)),
+    );
+  }, [obj.fields, query, picklistsOnly]);
 
   const remove = async (f: FieldDescribe) => {
     const msg = f.isCustom
       ? `Delete field "${f.label}"? Its data on every record will be permanently removed.`
-      : `Reset "${f.label}" to its original label, help text and picklist values?`;
+      : `Reset "${f.label}" to its original label, help text and dropdown values?`;
     if (!window.confirm(msg)) return;
     setError(null);
     try {
@@ -67,11 +75,20 @@ export function FieldsPanel({ obj, onChanged }: { obj: ObjectDetail; onChanged: 
   return (
     <div>
       <SectionTitle
-        title="Fields & Relationships"
-        subtitle={obj.supportsCustomFields ? undefined : 'Custom fields will be available when this object is connected. You can rename built-in fields now.'}
+        title="Fields & Links"
+        subtitle={obj.supportsCustomFields ? undefined : 'Custom fields will be available when this module is connected. You can rename built-in fields now.'}
         actions={
           <>
             <Input className="!w-48" placeholder="Quick find…" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <Select
+              className="!w-40"
+              value={picklistsOnly ? 'picklists' : 'all'}
+              onChange={(e) => setPicklistsOnly(e.target.value === 'picklists')}
+              aria-label="Filter fields"
+            >
+              <option value="all">All fields</option>
+              <option value="picklists">Dropdowns ({picklistCount})</option>
+            </Select>
             <Btn variant="primary" disabled={!obj.supportsCustomFields} onClick={() => setWizard(true)}>
               + New Field
             </Btn>
@@ -79,8 +96,14 @@ export function FieldsPanel({ obj, onChanged }: { obj: ObjectDetail; onChanged: 
         }
       />
       <ErrorBanner error={error} />
+      {picklistsOnly && (
+        <p className="text-xs text-gray-500 mb-2">
+          Click a dropdown to edit its values. Built-in values can be relabelled, reordered or deactivated; custom dropdown fields can also have values
+          added or removed.
+        </p>
+      )}
       {rows.length === 0 ? (
-        <Empty>No fields match.</Empty>
+        <Empty>{picklistsOnly ? 'This module has no dropdown fields.' : 'No fields match.'}</Empty>
       ) : (
         <Table
           head={
@@ -113,7 +136,14 @@ export function FieldsPanel({ obj, onChanged }: { obj: ObjectDetail; onChanged: 
                 </div>
               </td>
               <td className={`${td} font-mono text-xs text-gray-600`}>{f.apiName}</td>
-              <td className={`${td} text-gray-700`}>{typeLabel(f)}</td>
+              <td className={`${td} text-gray-700`}>
+                {typeLabel(f)}
+                {isPicklist(f) && f.picklistValues?.length ? (
+                  <div className="text-xs text-gray-500 mt-0.5 max-w-xs truncate" title={f.picklistValues.map((p) => p.label).join(', ')}>
+                    {f.picklistValues.filter((p) => p.active !== false).map((p) => p.label).join(', ')}
+                  </div>
+                ) : null}
+              </td>
               <td className={td}>{f.required ? '✓' : ''}</td>
               <td className={`${td} text-right whitespace-nowrap`}>
                 {(f.isCustom || f.id) && (
@@ -370,7 +400,7 @@ function FieldDetailsForm({
       {t === 'lookup' && !isStandard && (
         <FormField label="Related To" required>
           <Select value={form.referenceTo} disabled={!isNew} onChange={(e) => setForm({ ...form, referenceTo: e.target.value })}>
-            <option value="">— choose object —</option>
+            <option value="">— choose module —</option>
             {(objects || []).map((o) => (
               <option key={o.apiName} value={o.apiName}>
                 {o.label} ({o.apiName})
@@ -381,7 +411,7 @@ function FieldDetailsForm({
       )}
       {t === 'formula' && (
         <>
-          <FormField label="Formula Return Type" required>
+          <FormField label="Result Type" required>
             <Select className="!w-48" value={form.returnType} onChange={(e) => setForm({ ...form, returnType: e.target.value })}>
               {['number', 'currency', 'percent', 'text', 'date', 'checkbox'].map((r) => (
                 <option key={r} value={r}>
@@ -489,7 +519,7 @@ function NewFieldWizard({ obj, onClose, onCreated }: { obj: ObjectDetail; onClos
     }
   };
 
-  const stepTitles = ['Data type', 'Details', 'Field-level security', 'Page layouts'];
+  const stepTitles = ['Data type', 'Details', 'Field-level security', 'Form layouts'];
   const canNext =
     step === 1 ||
     (step === 2 &&
@@ -539,11 +569,11 @@ function NewFieldWizard({ obj, onClose, onCreated }: { obj: ObjectDetail; onClos
       {step === 2 && <FieldDetailsForm form={form} setForm={setForm} obj={obj} isNew />}
       {step === 3 && (
         <div>
-          <p className="text-sm text-gray-600 mb-3">Choose which profiles can see and edit this field. System Administrators always have full access.</p>
+          <p className="text-sm text-gray-600 mb-3">Choose which roles can see and edit this field. System Administrators always have full access.</p>
           <Table
             head={
               <tr>
-                <th className={th}>Profile</th>
+                <th className={th}>Role</th>
                 <th className={th}>Visible</th>
                 <th className={th}>Editable</th>
               </tr>
@@ -576,11 +606,11 @@ function NewFieldWizard({ obj, onClose, onCreated }: { obj: ObjectDetail; onClos
         <div>
           {layouts.length === 0 ? (
             <p className="text-sm text-gray-600">
-              This object uses the automatic layout, which always includes new fields. Create a page layout to control placement.
+              This module uses the automatic form layout, which always includes new fields. Create a form layout to control placement.
             </p>
           ) : (
             <>
-              <p className="text-sm text-gray-600 mb-3">Add the field to these page layouts:</p>
+              <p className="text-sm text-gray-600 mb-3">Add the field to these form layouts:</p>
               <div className="space-y-2">
                 {layouts.map((l) => (
                   <Checkbox
@@ -647,7 +677,7 @@ function EditFieldModal({ obj, field, onClose, onSaved }: { obj: ObjectDetail; f
       <ErrorBanner error={error} />
       {isStandard && (
         <p className="text-xs text-gray-500 mb-3">
-          Built-in field <span className="font-mono">{field.apiName}</span>. You can rename it, add help text, make it required and adjust picklist values.
+          Built-in field <span className="font-mono">{field.apiName}</span>. You can rename it, add help text, make it required and adjust dropdown values.
         </p>
       )}
       <FieldDetailsForm form={form} setForm={setForm} obj={obj} isNew={false} isStandard={isStandard} requiredLocked={field.requiredLocked} />

@@ -39,7 +39,7 @@ export const GET = route<P>(async (req, { object }) => {
   const query = and.length === 1 ? and[0] : { $and: and };
 
   const model = access.object.isCustom ? CustomRecord : getStandardObject(access.object.apiName)?.model;
-  if (!model) throw new BadRequestError('Unknown object');
+  if (!model) throw new BadRequestError('Unknown module');
   const docs = await model.find(query).sort({ updatedAt: -1 }).limit(limit);
   const shaped = access.shapeMany(docs);
 

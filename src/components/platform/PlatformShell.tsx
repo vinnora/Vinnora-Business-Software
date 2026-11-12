@@ -7,7 +7,7 @@ import { EnvironmentSwitcher } from './EnvironmentSwitcher';
 
 const LINKS = [
   { href: '/dashboard/reports', label: 'Reports & Dashboards' },
-  { href: '/dashboard/setup', label: 'Setup' },
+  { href: '/dashboard/setup', label: 'Settings' },
 ];
 
 /** Header used by organisation-wide pages (Setup, Reports & Dashboards). */

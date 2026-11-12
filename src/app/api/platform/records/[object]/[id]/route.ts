@@ -15,7 +15,7 @@ async function loadVisible(object: string, id: string) {
   access.assert('read');
   if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Record not found');
   const model = access.object.isCustom ? CustomRecord : getStandardObject(access.object.apiName)?.model;
-  if (!model) throw new BadRequestError('Unknown object');
+  if (!model) throw new BadRequestError('Unknown module');
   const doc = await model.findOne({ $and: [{ _id: id }, await access.readFilter()] });
   if (!doc) throw new NotFoundError('Record not found or you do not have access to it');
   return { ctx, access, doc };

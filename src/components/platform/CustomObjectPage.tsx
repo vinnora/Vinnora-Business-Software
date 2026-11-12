@@ -45,7 +45,7 @@ export function CustomObjectPage({ object, theme }: { object: string; theme?: Pl
     <ThemeScope theme={theme}>
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-xs uppercase tracking-wide text-gray-500">Custom Object</div>
+          <div className="text-xs uppercase tracking-wide text-gray-500">Custom Module</div>
           <h1 className="text-xl font-semibold text-gray-900">
             {d?.object.pluralLabel || object}
             {records.data && <span className="ml-2 text-sm font-normal text-gray-500">• {records.data.length} items</span>}

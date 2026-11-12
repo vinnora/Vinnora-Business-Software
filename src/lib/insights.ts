@@ -1,6 +1,6 @@
 /**
  * Lightweight on-device "AI" helpers — no external LLM calls.
- * For Salesforce-style sentiment/summary previews until a real model is wired.
+ * For CRM-style sentiment/summary previews until a real model is wired.
  */
 
 const POSITIVE_WORDS = [

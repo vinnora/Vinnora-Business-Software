@@ -26,7 +26,7 @@ export const POST = route<P>(async (req, { object }) => {
   const describe = await describeObject(tenant, object);
   const body = await readJson(req);
   const name = str(body.name, 80);
-  if (!name) throw new BadRequestError('Layout name is required');
+  if (!name) throw new BadRequestError('Form layout name is required');
 
   let sections: LayoutSection[] | undefined = Array.isArray(body.sections) ? (body.sections as LayoutSection[]) : undefined;
   if (!sections && body.cloneFrom && mongoose.isValidObjectId(body.cloneFrom)) {

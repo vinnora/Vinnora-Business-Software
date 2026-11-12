@@ -25,9 +25,9 @@ export const POST = route(async (req) => {
     res.cookies.delete(ENV_COOKIE);
     return res;
   }
-  if (!mongoose.isValidObjectId(body.sandboxId)) throw new BadRequestError('Sandbox not found');
+  if (!mongoose.isValidObjectId(body.sandboxId)) throw new BadRequestError('Test workspace not found');
   const sbx = await Sandbox.findOne({ _id: body.sandboxId, orgId: ctx.orgId, status: 'ready' }).lean();
-  if (!sbx || !canEnter(ctx, sbx)) throw new BadRequestError('Sandbox not found or you do not have access to it');
+  if (!sbx || !canEnter(ctx, sbx)) throw new BadRequestError('Test workspace not found or you do not have access to it');
   res.cookies.set(ENV_COOKIE, String(sbx._id), { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30 });
   return res;
 });

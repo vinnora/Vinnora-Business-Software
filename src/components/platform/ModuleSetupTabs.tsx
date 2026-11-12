@@ -7,7 +7,7 @@ import { ObjectManager } from './ObjectManager';
 import { MODULE_THEMES } from './themes';
 import { ThemeScope } from './ui';
 
-/** "Object Manager" tab content for a module's Setup page. */
+/** "Data Model" tab content for a module's Settings page. */
 export function ModuleObjectManager({ app }: { app: AppKey }) {
   return <ObjectManager app={app} theme={MODULE_THEMES[app]} />;
 }
@@ -15,16 +15,16 @@ export function ModuleObjectManager({ app }: { app: AppKey }) {
 /** "Users & Access" tab content: links to the organisation-wide Setup. */
 export function ModuleAccessLink({ app }: { app: AppKey }) {
   const items = [
-    { tab: 'users', title: 'Users', desc: 'Assign each person a profile, permission sets and permission set groups.' },
-    { tab: 'profiles', title: 'Profiles', desc: `Control access to ${APP_LABELS[app]} and its objects, fields and Setup.` },
-    { tab: 'permissionSets', title: 'Permission Sets', desc: 'Grant extra access to specific people without changing their profile.' },
-    { tab: 'groups', title: 'Permission Set Groups', desc: 'Bundle permission sets for a job role.' },
+    { tab: 'users', title: 'Users', desc: 'Assign each person a role, access packs and access pack groups.' },
+    { tab: 'profiles', title: 'Roles', desc: `Control access to ${APP_LABELS[app]} and its modules, fields and Settings.` },
+    { tab: 'permissionSets', title: 'Access Packs', desc: 'Grant extra access to specific people without changing their role.' },
+    { tab: 'groups', title: 'Access Pack Groups', desc: 'Bundle access packs for a job.' },
   ];
   return (
     <ThemeScope theme={MODULE_THEMES[app]}>
       <h2 className="text-lg font-semibold text-[var(--p-text)]">Users &amp; Access</h2>
       <p className="text-sm text-[var(--p-muted)] mb-4">
-        Profiles and permission sets apply across every app, so they are managed in the organisation-wide Setup.
+        Roles and access packs apply across every app, so they are managed in workspace-wide Settings.
       </p>
       <div className="grid sm:grid-cols-2 gap-3">
         {items.map((i) => (

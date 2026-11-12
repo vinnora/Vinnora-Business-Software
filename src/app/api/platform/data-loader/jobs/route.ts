@@ -24,7 +24,7 @@ export const POST = route(async (req) => {
   const body = await readJson(req);
   const operation = str(body.operation) as ImportOperation;
   if (!IMPORT_OPERATIONS.includes(operation)) throw new BadRequestError('operation must be insert, update, upsert or delete');
-  if (!perms.system.importData) throw new ForbiddenError('You need the Import Data permission to use the Data Loader.');
+  if (!perms.system.importData) throw new ForbiddenError('You need the Import Data permission to use Import & Export.');
 
   const access = await connectedAccess(ctx, str(body.objectApiName));
   access.assert('read');

@@ -362,7 +362,7 @@ export function RecordFormBody({ describe: d, record, defaults, submit, onSaved,
 
   const save = async () => {
     setError(null);
-    // Layout-level required fields are enforced by the form (like Salesforce).
+    // Layout-level required fields are enforced by the form.
     const missing: FieldError[] = [];
     for (const s of sections)
       for (const it of s.items) {

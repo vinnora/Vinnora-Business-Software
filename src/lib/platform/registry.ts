@@ -109,39 +109,39 @@ const so = (
 
 export const STANDARD_OBJECTS: StandardObject[] = [
   // Sales & Service — pilot: enforced
-  so('sales-service', 'Account', Account, 'Account', 'Accounts', {
+  so('sales-service', 'Account', Account, 'Company', 'Companies', {
     enforced: true,
     description: 'Companies you do business with.',
     fieldOverrides: { website: { type: 'url' } },
   }),
-  so('sales-service', 'Contact', Contact, 'Contact', 'Contacts', {
+  so('sales-service', 'Contact', Contact, 'Person', 'People', {
     enforced: true,
-    description: 'People associated with accounts.',
+    description: 'People associated with companies.',
     systemFields: ['accountName'],
     appWritable: ['accountName'],
   }),
-  so('sales-service', 'Lead', Lead, 'Lead', 'Leads', {
+  so('sales-service', 'Lead', Lead, 'Enquiry', 'Enquiries', {
     enforced: true,
     description: 'Prospects not yet qualified.',
     systemFields: ['convertedAt', 'convertedAccountId', 'convertedContactId', 'convertedOpportunityId'],
   }),
-  so('sales-service', 'Opportunity', Opportunity, 'Opportunity', 'Opportunities', {
+  so('sales-service', 'Opportunity', Opportunity, 'Deal', 'Deals', {
     enforced: true,
     description: 'Deals in progress.',
     systemFields: ['probability', 'accountName', 'contactName'],
     appWritable: ['accountName', 'contactName'],
     fieldOverrides: { currency: { type: 'text' } },
   }),
-  so('sales-service', 'Case', Case, 'Case', 'Cases', {
+  so('sales-service', 'Case', Case, 'Ticket', 'Tickets', {
     enforced: true,
     description: 'Customer issues and support requests.',
     nameFields: ['caseNumber', 'subject'],
     systemFields: ['caseNumber', 'slaId', 'slaDueAt', 'firstResponseAt', 'resolvedAt', 'closedAt', 'accountName', 'contactName'],
     appWritable: ['accountName', 'contactName', 'firstResponseAt'],
   }),
-  so('sales-service', 'Activity', Activity, 'Activity', 'Activities', { nameFields: ['subject'] }),
-  so('sales-service', 'WorkOrder', WorkOrder, 'Work Order', 'Work Orders', { nameFields: ['workOrderNumber', 'subject'] }),
-  so('sales-service', 'KnowledgeArticle', KnowledgeArticle, 'Knowledge Article', 'Knowledge Articles', { nameFields: ['title'] }),
+  so('sales-service', 'Activity', Activity, 'Follow-up', 'Follow-ups', { nameFields: ['subject'] }),
+  so('sales-service', 'WorkOrder', WorkOrder, 'Job Card', 'Job Cards', { nameFields: ['workOrderNumber', 'subject'] }),
+  so('sales-service', 'KnowledgeArticle', KnowledgeArticle, 'Help Article', 'Help Articles', { nameFields: ['title'] }),
   so('sales-service', 'Technician', Technician, 'Technician', 'Technicians'),
   so('sales-service', 'SLA', SLA, 'SLA', 'SLAs'),
 
@@ -171,12 +171,15 @@ export const STANDARD_OBJECTS: StandardObject[] = [
   so('inventory', 'StockAdjustment', StockAdjustment, 'Stock Adjustment', 'Stock Adjustments'),
 
   // Marketing
-  so('marketing', 'MktCampaign', MktCampaign, 'Campaign', 'Campaigns'),
-  so('marketing', 'MktLead', MktLead, 'Marketing Lead', 'Marketing Leads'),
+  so('marketing', 'MktCampaign', MktCampaign, 'Promotion', 'Promotions'),
+  so('marketing', 'MktLead', MktLead, 'Marketing Enquiry', 'Marketing Enquiries'),
   so('marketing', 'MktEmailMessage', MktEmailMessage, 'Email', 'Emails'),
   so('marketing', 'MktEmailTemplate', MktEmailTemplate, 'Email Template', 'Email Templates'),
   so('marketing', 'MktSmsMessage', MktSmsMessage, 'SMS Message', 'SMS Messages'),
-  so('marketing', 'MktSocialPost', MktSocialPost, 'Social Post', 'Social Posts'),
+  so('marketing', 'MktSocialPost', MktSocialPost, 'Social Post', 'Social Posts', {
+    // social-media account, not a CRM company
+    fieldOverrides: { accountName: { label: 'Account Name' } },
+  }),
   so('marketing', 'MktEvent', MktEvent, 'Event', 'Events'),
   so('marketing', 'MktEventRegistration', MktEventRegistration, 'Event Registration', 'Event Registrations'),
   so('marketing', 'MktSurvey', MktSurvey, 'Survey', 'Surveys'),
@@ -247,6 +250,31 @@ export function humanize(path: string): string {
       .replace(/^./, (c) => c.toUpperCase()),
   );
   return last.join(' ').replace(/\bId\b/g, 'ID').replace(/\bSla\b/g, 'SLA').replace(/\bUrl\b/g, 'URL');
+}
+
+/** Vinnora record names used in built-in field labels of CRM (Sell & Support, Marketing) objects. */
+const CRM_RECORD_TERMS: [RegExp, string][] = [
+  [/\bWork Orders\b/g, 'Job Cards'],
+  [/\bWork Order\b/g, 'Job Card'],
+  [/\bAccounts\b/g, 'Companies'],
+  [/\bAccount\b/g, 'Company'],
+  [/\bContacts\b/g, 'People'],
+  [/\bContact\b/g, 'Person'],
+  [/\bLeads\b/g, 'Enquiries'],
+  [/\bLead\b/g, 'Enquiry'],
+  [/\bOpportunities\b/g, 'Deals'],
+  [/\bOpportunity\b/g, 'Deal'],
+  [/\bCases\b/g, 'Tickets'],
+  [/\bCase\b/g, 'Ticket'],
+  [/\bCampaigns\b/g, 'Promotions'],
+  [/\bCampaign\b/g, 'Promotion'],
+];
+
+/** Default label of a built-in field: humanized path, with record terms renamed on CRM objects. */
+function fieldLabel(path: string, app: AppKey): string {
+  const label = humanize(path);
+  if (app !== 'sales-service' && app !== 'marketing') return label;
+  return CRM_RECORD_TERMS.reduce((l, [re, to]) => l.replace(re, to), label);
 }
 
 function guessReference(path: string, app: AppKey): string | undefined {
@@ -327,7 +355,7 @@ export function standardFields(obj: StandardObject): FieldDescribe[] {
     const f: FieldDescribe = {
       apiName,
       path,
-      label: humanize(path),
+      label: fieldLabel(path, obj.app),
       type: guessed.type,
       referenceTo: guessed.referenceTo,
       isCustom: false,

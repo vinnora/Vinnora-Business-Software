@@ -19,7 +19,7 @@ const NAV = [
   { href: '/dashboard/inventory/barcodes', label: 'Barcodes', icon: 'barcode' },
   { href: '/dashboard/inventory/labels', label: 'Labels', icon: 'tag' },
   { href: '/dashboard/inventory/reports', label: 'Reports', icon: 'chart' },
-  { href: '/dashboard/inventory/setup', label: 'Setup', icon: 'gear' },
+  { href: '/dashboard/inventory/setup', label: 'Settings', icon: 'gear' },
 ];
 
 function Icon({ name, className = 'h-5 w-5' }: { name: string; className?: string }) {

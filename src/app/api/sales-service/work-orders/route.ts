@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(wo, { status: 201 });
   } catch (error) {
     console.error('Error creating work order:', error);
-    return NextResponse.json({ error: 'Failed to create work order' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create job card' }, { status: 500 });
   }
 }
 

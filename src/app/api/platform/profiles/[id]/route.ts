@@ -13,9 +13,9 @@ import { BadRequestError, NotFoundError } from '@/lib/platform/errors';
 type P = { id: string };
 
 async function load(tenant: string, id: string) {
-  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Profile not found');
+  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Role not found');
   const p = await Profile.findOne({ _id: id, orgId: tenant });
-  if (!p) throw new NotFoundError('Profile not found');
+  if (!p) throw new NotFoundError('Role not found');
   return p;
 }
 
@@ -28,7 +28,7 @@ export const PATCH = route<P>(async (req, { id }) => {
   const { tenant } = await setupContext('manageProfilesPermissionSets');
   const profile = await load(tenant, id);
   if (profile.key === 'system_admin') {
-    throw new BadRequestError('The System Administrator profile always has full access and cannot be edited.');
+    throw new BadRequestError('The System Administrator role always has full access and cannot be edited.');
   }
   const body = await readJson(req);
   const bundle = cleanBundle(body, new Set(await allObjectApiNames(tenant)));
@@ -60,11 +60,11 @@ export const PATCH = route<P>(async (req, { id }) => {
 export const DELETE = route<P>(async (_req, { id }) => {
   const { ctx, tenant } = await setupContext('manageProfilesPermissionSets');
   const profile = await load(tenant, id);
-  if (profile.isSystem) throw new BadRequestError('Built-in profiles cannot be deleted.');
+  if (profile.isSystem) throw new BadRequestError('Built-in roles cannot be deleted.');
   const users = ctx.sandbox
     ? await UserAssignment.countDocuments({ orgId: tenant, profileId: id })
     : await User.countDocuments({ profileId: id });
-  if (users) throw new BadRequestError(`${users} user(s) still have this profile. Reassign them first.`);
+  if (users) throw new BadRequestError(`${users} user(s) still have this role. Reassign them first.`);
   await LayoutAssignment.deleteMany({ orgId: tenant, profileId: id });
   await RestrictionRule.updateMany({ orgId: tenant, appliesTo: 'profiles' }, { $pull: { appliesToIds: id } });
   await profile.deleteOne();

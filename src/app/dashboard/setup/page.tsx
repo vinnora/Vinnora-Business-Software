@@ -8,9 +8,9 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
   const { tab } = await searchParams;
   const initialTab = TABS.includes(tab as SetupTab) ? (tab as SetupTab) : 'users';
   return (
-    <PlatformShell title="Setup">
+    <PlatformShell title="Settings">
       <p className="text-sm text-gray-600 mb-4">
-        Manage who can do what across every app, configure objects, move data in and out, and test changes in sandboxes before deploying
+        Manage who can do what across every app, configure modules, move data in and out, and try changes in test workspaces before deploying
         them to production.
       </p>
       <AccessSetup theme={MODULE_THEMES.setup} initialTab={initialTab} />

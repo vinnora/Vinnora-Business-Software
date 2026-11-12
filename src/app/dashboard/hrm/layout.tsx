@@ -16,7 +16,7 @@ const NAV = [
   { href: '/dashboard/hrm/onboarding', label: 'Onboarding', icon: 'rocket' },
   { href: '/dashboard/hrm/self-service', label: 'Self Service', icon: 'user' },
   { href: '/dashboard/hrm/analytics', label: 'Analytics', icon: 'chart' },
-  { href: '/dashboard/hrm/setup', label: 'Setup', icon: 'gear' },
+  { href: '/dashboard/hrm/setup', label: 'Settings', icon: 'gear' },
 ];
 
 function Icon({ name, className = 'h-5 w-5' }: { name: string; className?: string }) {

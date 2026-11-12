@@ -12,10 +12,10 @@ type P = { object: string; id: string };
 
 export const PATCH = route<P>(async (req, { object, id }) => {
   const { tenant } = await setupContext('customizeApplication');
-  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Layout not found');
+  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Form layout not found');
   const describe = await describeObject(tenant, object);
   const layout = await PageLayout.findOne({ _id: id, orgId: tenant, objectApiName: describe.apiName });
-  if (!layout) throw new NotFoundError('Layout not found');
+  if (!layout) throw new NotFoundError('Form layout not found');
   const body = await readJson(req);
 
   if (body.name !== undefined) layout.name = str(body.name, 80) || layout.name;
@@ -26,7 +26,7 @@ export const PATCH = route<P>(async (req, { object, id }) => {
     const placed = new Set(sections.flatMap((s) => s.items.map((i) => i.field)));
     const missing = describe.fields.filter((f) => f.required && !f.isSystem && !placed.has(f.apiName));
     if (missing.length) {
-      throw new BadRequestError(`Required fields must be on the layout: ${missing.map((f) => f.label).join(', ')}`);
+      throw new BadRequestError(`Required fields must be on the form layout: ${missing.map((f) => f.label).join(', ')}`);
     }
     layout.sections = sections;
     layout.markModified('sections');
@@ -41,11 +41,11 @@ export const PATCH = route<P>(async (req, { object, id }) => {
 
 export const DELETE = route<P>(async (_req, { object, id }) => {
   const { tenant } = await setupContext('customizeApplication');
-  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Layout not found');
+  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Form layout not found');
   const layout = await PageLayout.findOne({ _id: id, orgId: tenant, objectApiName: object });
-  if (!layout) throw new NotFoundError('Layout not found');
+  if (!layout) throw new NotFoundError('Form layout not found');
   const assigned = await LayoutAssignment.countDocuments({ orgId: tenant, layoutId: id });
-  if (assigned) throw new BadRequestError('This layout is assigned to profiles. Reassign them first.');
+  if (assigned) throw new BadRequestError('This form layout is assigned to roles. Reassign them first.');
   await layout.deleteOne();
   if (layout.isDefault) {
     const next = await PageLayout.findOne({ orgId: tenant, objectApiName: object }).sort({ createdAt: 1 });

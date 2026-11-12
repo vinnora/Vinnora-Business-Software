@@ -6,16 +6,16 @@ import QuickStart from '@/components/QuickStart';
 import { QUICK_START } from '@/lib/quick-start-steps';
 
 const NAV = [
-  { href: '/dashboard/sales-service', label: 'Home', icon: 'home' },
-  { href: '/dashboard/sales-service/accounts', label: 'Accounts', icon: 'briefcase' },
-  { href: '/dashboard/sales-service/contacts', label: 'Contacts', icon: 'user' },
-  { href: '/dashboard/sales-service/leads', label: 'Leads', icon: 'spark' },
-  { href: '/dashboard/sales-service/opportunities', label: 'Opportunities', icon: 'chart' },
-  { href: '/dashboard/sales-service/activities', label: 'Activities', icon: 'clock' },
-  { href: '/dashboard/sales-service/cases', label: 'Cases', icon: 'ticket' },
-  { href: '/dashboard/sales-service/field-service', label: 'Field Service', icon: 'wrench' },
-  { href: '/dashboard/sales-service/knowledge', label: 'Knowledge', icon: 'book' },
-  { href: '/dashboard/sales-service/setup', label: 'Setup', icon: 'gear' },
+  { href: '/dashboard/sales-service', label: 'Today', icon: 'home' },
+  { href: '/dashboard/sales-service/accounts', label: 'Companies', icon: 'briefcase' },
+  { href: '/dashboard/sales-service/contacts', label: 'People', icon: 'user' },
+  { href: '/dashboard/sales-service/leads', label: 'Enquiries', icon: 'spark' },
+  { href: '/dashboard/sales-service/opportunities', label: 'Deals', icon: 'chart' },
+  { href: '/dashboard/sales-service/activities', label: 'Follow-ups', icon: 'clock' },
+  { href: '/dashboard/sales-service/cases', label: 'Tickets', icon: 'ticket' },
+  { href: '/dashboard/sales-service/field-service', label: 'Field', icon: 'wrench' },
+  { href: '/dashboard/sales-service/knowledge', label: 'Help Library', icon: 'book' },
+  { href: '/dashboard/sales-service/setup', label: 'Settings', icon: 'gear' },
 ];
 
 function Icon({ name, className = 'h-5 w-5' }: { name: string; className?: string }) {
@@ -107,7 +107,7 @@ export default function SalesServiceLayout({ children }: { children: ReactNode }
             </div>
             <div>
               <div className="text-xs uppercase tracking-wide text-white/60">Vinnora</div>
-              <div className="text-sm font-semibold">Sales &amp; Service</div>
+              <div className="text-sm font-semibold">Sell &amp; Support</div>
             </div>
           </div>
         </div>

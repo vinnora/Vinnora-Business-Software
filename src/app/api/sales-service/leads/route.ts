@@ -17,9 +17,9 @@ function defined(obj: Record<string, unknown>): Record<string, unknown> {
 
 async function findVisibleLead(ctx: AuthContext, id: unknown) {
   const access = await getObjectAccess(ctx, 'Lead');
-  if (!mongoose.isValidObjectId(id)) throw new BadRequestError('Invalid lead id');
+  if (!mongoose.isValidObjectId(id)) throw new BadRequestError('Invalid enquiry id');
   const lead = await Lead.findOne({ $and: [{ _id: id }, await access.readFilter()] });
-  if (!lead) throw new NotFoundError('Lead not found');
+  if (!lead) throw new NotFoundError('Enquiry not found');
   return lead;
 }
 
@@ -78,7 +78,7 @@ async function convertLead(ctx: AuthContext, body: Record<string, unknown>) {
   const oppPrep = createOpp
     ? await oppAccess.prepareWrite(
         defined({
-          name: body.opportunityName || `${accountName} - New Opportunity`,
+          name: body.opportunityName || `${accountName} - New Deal`,
           accountId: String(accountId),
           accountName,
           contactId: String(contactId),

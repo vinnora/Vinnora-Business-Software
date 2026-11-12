@@ -7,6 +7,10 @@ import { RecordFormModal, moduleSubmit, useDescribe } from '@/components/platfor
 import { ThemeScope } from '@/components/platform/ui';
 import { MODULE_THEMES } from '@/components/platform/themes';
 
+const TAB_LABELS = { related: 'Linked Records', details: 'Details', activity: 'Follow-ups' } as const;
+// Display names for stored activity types (stored values stay unchanged).
+const ACTIVITY_TYPE_LABELS: Record<string, string> = { Task: 'To-do' };
+
 const fmtINR = (n = 0) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 
@@ -28,7 +32,7 @@ export default function Account360Page() {
 
   if (loading) return <div className="p-6 text-sm text-gray-500">Loading…</div>;
   if (!data || !data.account)
-    return <div className="p-6 text-sm text-gray-500">{data?.error || 'Account not found.'}</div>;
+    return <div className="p-6 text-sm text-gray-500">{data?.error || 'Company not found.'}</div>;
 
   const { account, contacts, opportunities, cases, activities } = data;
 
@@ -49,7 +53,7 @@ export default function Account360Page() {
             {account.name?.charAt(0)}
           </div>
           <div className="flex-1">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Account</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">Company</div>
             <h1 className="text-2xl font-semibold text-gray-900">{account.name}</h1>
             <div className="text-sm text-gray-600 mt-1">
               {[account.type, account.industry, account.billingCity, account.billingCountry]
@@ -70,17 +74,17 @@ export default function Account360Page() {
               href="/dashboard/sales-service/accounts"
               className="text-sm text-[#0176d3] hover:underline"
             >
-              ← Back to Accounts
+              ← Back to Companies
             </Link>
           </div>
         </div>
 
         {/* KPI strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-          <KpiPill label="Contacts" value={contacts.length} />
+          <KpiPill label="People" value={contacts.length} />
           <KpiPill label="Open Pipeline" value={fmtINR(pipelineValue)} />
           <KpiPill label="Closed Won" value={fmtINR(wonValue)} />
-          <KpiPill label="Open Cases" value={openCases} tone={openCases > 0 ? 'warn' : 'ok'} />
+          <KpiPill label="Open Tickets" value={openCases} tone={openCases > 0 ? 'warn' : 'ok'} />
         </div>
       </div>
 
@@ -95,7 +99,7 @@ export default function Account360Page() {
                 tab === t ? 'border-[#0176d3] text-[#0176d3] font-medium' : 'border-transparent text-gray-600'
               }`}
             >
-              {t}
+              {TAB_LABELS[t]}
             </button>
           ))}
         </div>
@@ -105,10 +109,10 @@ export default function Account360Page() {
         {tab === 'related' && (
           <>
             <RelatedList
-              title="Contacts"
+              title="People"
               count={contacts.length}
               cta={{ href: '/dashboard/sales-service/contacts', label: 'New' }}
-              empty="No contacts on this account."
+              empty="No people at this company."
             >
               {contacts.map((c: any) => (
                 <li key={c._id} className="px-4 py-2 border-t border-gray-100 text-sm flex items-center justify-between">
@@ -122,10 +126,10 @@ export default function Account360Page() {
             </RelatedList>
 
             <RelatedList
-              title="Opportunities"
+              title="Deals"
               count={opportunities.length}
               cta={{ href: '/dashboard/sales-service/opportunities', label: 'New' }}
-              empty="No opportunities yet."
+              empty="No deals yet."
             >
               {opportunities.map((o: any) => (
                 <li key={o._id} className="px-4 py-2 border-t border-gray-100 text-sm flex items-center justify-between">
@@ -144,10 +148,10 @@ export default function Account360Page() {
             </RelatedList>
 
             <RelatedList
-              title="Cases"
+              title="Tickets"
               count={cases.length}
               cta={{ href: '/dashboard/sales-service/cases', label: 'New' }}
-              empty="No cases on this account."
+              empty="No tickets for this company."
             >
               {cases.map((c: any) => (
                 <li key={c._id} className="px-4 py-2 border-t border-gray-100 text-sm flex items-center justify-between">
@@ -164,7 +168,7 @@ export default function Account360Page() {
 
         {tab === 'details' && (
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 className="text-sm font-semibold mb-4 uppercase tracking-wide text-gray-500">Account Details</h3>
+            <h3 className="text-sm font-semibold mb-4 uppercase tracking-wide text-gray-500">Company Details</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <Detail label="Type" value={account.type} />
               <Detail label="Industry" value={account.industry} />
@@ -194,10 +198,10 @@ export default function Account360Page() {
         {tab === 'activity' && (
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <h3 className="text-sm font-semibold mb-3 uppercase tracking-wide text-gray-500">
-              Activity Timeline
+              Follow-up Timeline
             </h3>
             {activities.length === 0 ? (
-              <div className="text-sm text-gray-500 text-center py-6">No activities logged.</div>
+              <div className="text-sm text-gray-500 text-center py-6">No follow-ups logged.</div>
             ) : (
               <ul className="space-y-2">
                 {activities.map((a: any) => (
@@ -208,7 +212,7 @@ export default function Account360Page() {
                     <div className="flex-1">
                       <div className="text-sm font-medium">{a.subject}</div>
                       <div className="text-xs text-gray-500">
-                        {a.type} • {new Date(a.createdAt).toLocaleString()}
+                        {ACTIVITY_TYPE_LABELS[a.type] || a.type} • {new Date(a.createdAt).toLocaleString()}
                       </div>
                       {a.description && <div className="text-sm text-gray-600 mt-1">{a.description}</div>}
                     </div>

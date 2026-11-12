@@ -32,13 +32,13 @@ export default function AnalyticsPage() {
       <div className="mb-6">
         <div className="text-xs uppercase tracking-wide text-[#94A8B8]">Marketing</div>
         <h1 className="text-2xl font-semibold text-[#3D5266]">Analytics</h1>
-        <p className="text-sm text-[#5A7A8C] mt-1">Campaign performance and funnel metrics.</p>
+        <p className="text-sm text-[#5A7A8C] mt-1">Promotion performance and funnel metrics.</p>
       </div>
 
-      {/* Campaign overview */}
-      <h2 className="text-sm font-semibold text-[#3D5266] mb-3 uppercase tracking-wide">Campaign Overview</h2>
+      {/* Promotion overview */}
+      <h2 className="text-sm font-semibold text-[#3D5266] mb-3 uppercase tracking-wide">Promotion Overview</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Tile label="Total Campaigns" value={data.totalCampaigns || 0} tone="storm" />
+        <Tile label="Total Promotions" value={data.totalCampaigns || 0} tone="storm" />
         <Tile label="Active" value={data.activeCampaigns || 0} tone="lavender" />
         <Tile label="Total Budget" value={fmtINR(data.totalBudget)} tone="pollen" />
         <Tile label="Total Spend" value={fmtINR(data.totalSpend)} tone="twilight" />
@@ -54,11 +54,11 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Lead funnel */}
-      <h2 className="text-sm font-semibold text-[#3D5266] mb-3 uppercase tracking-wide">Lead Funnel</h2>
+      <h2 className="text-sm font-semibold text-[#3D5266] mb-3 uppercase tracking-wide">Enquiry Funnel</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-        <Tile label="Total Leads" value={data.totalLeads || 0} tone="storm" />
+        <Tile label="Total Enquiries" value={data.totalLeads || 0} tone="storm" />
         <Tile label="MQLs" value={data.mqlLeads || 0} tone="lavender" hint="Marketing Qualified" />
-        <Tile label="Conversion" value={data.totalLeads ? `${((data.mqlLeads || 0) / data.totalLeads * 100).toFixed(1)}%` : '0%'} tone="pollen" hint="Lead → MQL" />
+        <Tile label="Conversion" value={data.totalLeads ? `${((data.mqlLeads || 0) / data.totalLeads * 100).toFixed(1)}%` : '0%'} tone="pollen" hint="Enquiry → MQL" />
       </div>
 
       {/* ROI */}

@@ -11,7 +11,7 @@ type P = { id: string };
 export const GET = route<P>(async (_req, { id }) => {
   const { ctx, prodTenant } = await productionContext('manageSandboxes');
   const sbx = await loadSandbox(ctx, id);
-  if (sbx.status !== 'ready') throw new BadRequestError('Sandbox is not ready');
+  if (sbx.status !== 'ready') throw new BadRequestError('Test workspace is not ready');
   const { source, target } = await compareSandbox(sbx, prodTenant);
   return NextResponse.json(diffComponents(source, target));
 });

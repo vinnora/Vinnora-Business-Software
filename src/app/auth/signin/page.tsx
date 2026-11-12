@@ -54,7 +54,7 @@ export default function SignIn() {
             manufacturing — one platform, one login.
           </p>
           <div className="mt-6 flex gap-3">
-            {['Sales', 'Accounting', 'Inventory', 'Marketing', 'HRM', 'Manufacturing'].map((app) => (
+            {['Sell & Support', 'Accounting', 'Inventory', 'Marketing', 'HRM', 'Manufacturing'].map((app) => (
               <span key={app} className="text-[10px] text-white/50 bg-white/10 px-2 py-1 rounded">{app}</span>
             ))}
           </div>

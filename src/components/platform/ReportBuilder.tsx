@@ -160,7 +160,7 @@ export function ReportBuilder({
             disabled={Boolean(def._id)}
             onChange={(e) => setDef({ ...emptyReport(e.target.value), name: def.name, folder: def.folder })}
           >
-            <option value="">— choose an object —</option>
+            <option value="">— choose a module —</option>
             {(objects.data || []).map((o) => (
               <option key={o.apiName} value={o.apiName}>
                 {o.pluralLabel}
@@ -277,7 +277,7 @@ export function ReportBuilder({
                     + Add summary
                   </Btn>
                 ) : (
-                  <p className="text-[11px] text-gray-500">This object has no number fields to summarise. Record counts are always shown.</p>
+                  <p className="text-[11px] text-gray-500">This module has no number fields to summarise. Record counts are always shown.</p>
                 )}
               </Section>
             )}
@@ -361,7 +361,7 @@ export function ReportBuilder({
         </div>
         <ErrorBanner error={previewError} />
         {!def.objectApiName ? (
-          <div className="bg-white border border-dashed border-gray-300 rounded-lg p-10 text-center text-sm text-gray-500">Choose an object to start.</div>
+          <div className="bg-white border border-dashed border-gray-300 rounded-lg p-10 text-center text-sm text-gray-500">Choose a module to start.</div>
         ) : describe.loading && !describe.data ? (
           <Loading />
         ) : def.format !== 'tabular' && !def.groupings.length ? (

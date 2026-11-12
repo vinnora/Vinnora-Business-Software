@@ -30,7 +30,7 @@ type Campaign = {
 
 const QUICK_LINKS = [
   { href: '/dashboard/marketing/email', label: 'Email', desc: 'Draft & send emails', icon: '✉' },
-  { href: '/dashboard/marketing/sms', label: 'SMS', desc: 'Text message campaigns', icon: '💬' },
+  { href: '/dashboard/marketing/sms', label: 'SMS', desc: 'Text message promotions', icon: '💬' },
   { href: '/dashboard/marketing/social', label: 'Social', desc: 'Schedule & monitor', icon: '📢' },
   { href: '/dashboard/marketing/events', label: 'Events', desc: 'Publish & sell tickets', icon: '🎟' },
   { href: '/dashboard/marketing/surveys', label: 'Surveys', desc: 'Collect feedback', icon: '📋' },
@@ -68,21 +68,21 @@ export default function MarketingHome() {
         <div>
           <div className="text-xs uppercase tracking-wide text-[#94A8B8]">Marketing</div>
           <h1 className="text-2xl font-semibold text-[#3D5266]">Marketing Hub</h1>
-          <p className="text-sm text-[#5A7A8C] mt-1">Your campaigns at a glance.</p>
+          <p className="text-sm text-[#5A7A8C] mt-1">Your promotions at a glance.</p>
         </div>
         <Link
           href="/dashboard/marketing/campaigns"
           className="px-4 py-2 bg-gradient-to-r from-[#5A7A8C] to-[#94A8B8] text-white text-sm rounded hover:from-[#3D5266] hover:to-[#5A7A8C] shadow-sm shadow-[#5A7A8C]/30"
         >
-          + New Campaign
+          + New Promotion
         </Link>
       </div>
 
       {/* KPI tiles */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <Tile label="Campaigns" value={summary.totalCampaigns || 0} tone="storm" hint="All time" />
+        <Tile label="Promotions" value={summary.totalCampaigns || 0} tone="storm" hint="All time" />
         <Tile label="Active" value={summary.activeCampaigns || 0} tone="lavender" hint="Running now" />
-        <Tile label="Leads" value={summary.totalLeads || 0} tone="pollen" hint="Marketing leads" />
+        <Tile label="Enquiries" value={summary.totalLeads || 0} tone="pollen" hint="Marketing enquiries" />
         <Tile label="MQLs" value={summary.mqlLeads || 0} tone="twilight" hint="Qualified" />
         <Tile label="Open Rate" value={`${openRate}%`} tone="storm" hint={`${summary.totalOpened || 0} / ${summary.totalSent || 0}`} />
         <Tile label="Click Rate" value={`${clickRate}%`} tone="lavender" hint={`${summary.totalClicked || 0} clicks`} />
@@ -91,7 +91,7 @@ export default function MarketingHome() {
       {/* Revenue & spend row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="rounded-lg p-5 border bg-gradient-to-br from-[#3D5266] to-[#5A7A8C] text-white border-transparent">
-          <div className="text-xs uppercase tracking-wide text-white/70">Campaign Revenue</div>
+          <div className="text-xs uppercase tracking-wide text-white/70">Promotion Revenue</div>
           <div className="text-2xl font-semibold mt-1">{fmtINR(summary.totalRevenue)}</div>
         </div>
         <div className="rounded-lg p-5 border bg-white border-[#D6E5EC]">
@@ -107,7 +107,7 @@ export default function MarketingHome() {
       {/* Active campaigns */}
       <div className="bg-white border border-[#D6E5EC] rounded-lg p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-[#3D5266]">Active Campaigns</h2>
+          <h2 className="text-base font-semibold text-[#3D5266]">Active Promotions</h2>
           <Link href="/dashboard/marketing/campaigns" className="text-xs text-[#5A7A8C] hover:underline">
             View all →
           </Link>
@@ -115,7 +115,7 @@ export default function MarketingHome() {
         {loading ? (
           <div className="text-sm text-[#94A8B8]">Loading…</div>
         ) : campaigns.length === 0 ? (
-          <div className="text-sm text-[#94A8B8] text-center py-6">No active campaigns yet.</div>
+          <div className="text-sm text-[#94A8B8] text-center py-6">No active promotions yet.</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="text-xs uppercase text-[#94A8B8]">

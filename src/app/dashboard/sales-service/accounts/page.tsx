@@ -46,7 +46,7 @@ export default function AccountsPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this account?')) return;
+    if (!confirm('Delete this company?')) return;
     await actionError.run(() => api(`${API}?id=${id}`, { method: 'DELETE' }));
     reload();
   };
@@ -54,7 +54,7 @@ export default function AccountsPage() {
   return (
     <>
       <PageHeader
-        title="Accounts"
+        title="Companies"
         subtitle="Sales"
         count={items.length}
         actions={
@@ -63,7 +63,7 @@ export default function AccountsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applySearch()}
-              placeholder="Search accounts…"
+              placeholder="Search companies…"
               className="px-3 py-1.5 text-sm border border-gray-300 rounded focus:border-[#0176d3] focus:outline-none"
             />
             {canCreate && (
@@ -108,7 +108,7 @@ export default function AccountsPage() {
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                    No accounts yet.
+                    No companies yet.
                     {canCreate && (
                       <>
                         {' '}

@@ -54,7 +54,7 @@ export function EnvironmentSwitcher({ tone = 'dark' }: { tone?: 'dark' | 'light'
   }, []);
 
   if (!env || (!env.current && env.sandboxes.length === 0)) return null;
-  const label = env.current ? `Sandbox: ${env.current.name}` : 'Production';
+  const label = env.current ? `Test workspace: ${env.current.name}` : 'Production';
   const btn =
     tone === 'dark'
       ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
@@ -82,7 +82,7 @@ export function EnvironmentSwitcher({ tone = 'dark' }: { tone?: 'dark' | 'light'
               key={s.id}
               active={env.current?.id === s.id}
               label={s.name}
-              sub={`${s.type === 'developer' ? 'Developer' : s.type === 'partial' ? 'Partial Copy' : 'Full Copy'} sandbox`}
+              sub={`${s.type === 'developer' ? 'Developer' : s.type === 'partial' ? 'Partial Copy' : 'Full Copy'} test workspace`}
               onClick={() => switchEnvironment(s.id).catch((e) => setError(e.message))}
             />
           ))}
@@ -115,8 +115,8 @@ export function SandboxIndicator() {
       <div className="fixed top-0 left-0 right-0 h-[3px] bg-[#eda100] z-[60] pointer-events-none" aria-hidden />
       <div className="fixed bottom-4 left-4 z-[60] flex items-center gap-3 rounded-full bg-[#0b0b0b] text-white text-xs pl-3 pr-1 py-1 shadow-lg" role="status">
         <span className="w-2 h-2 rounded-full bg-[#eda100]" aria-hidden />
-        <span title="Only Sales & Service and custom objects are sandboxed. Other apps are unavailable here.">
-          <b>SANDBOX</b>: {env.current.name}
+        <span title="Only Sell & Support and custom modules are available in a test workspace. Other apps are unavailable here.">
+          <b>TEST WORKSPACE</b>: {env.current.name}
         </span>
         <button
           type="button"

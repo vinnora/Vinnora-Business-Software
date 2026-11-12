@@ -1,12 +1,12 @@
 /**
- * Platform metadata types — shared by server (enforcement) and client (Setup UI, dynamic forms).
+ * Platform metadata types — shared by server (enforcement) and client (Settings UI, dynamic forms).
  * Keep this file free of server-only imports.
  */
 
 export type AppKey = 'sales-service' | 'accounting' | 'inventory' | 'marketing' | 'hrm' | 'manufacturing';
 
 export const APP_LABELS: Record<AppKey, string> = {
-  'sales-service': 'Sales & Service',
+  'sales-service': 'Sell & Support',
   accounting: 'Accounting',
   inventory: 'Inventory',
   marketing: 'Marketing',
@@ -46,13 +46,13 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   date: 'Date',
   datetime: 'Date/Time',
   checkbox: 'Checkbox',
-  picklist: 'Picklist',
-  multipicklist: 'Picklist (Multi-Select)',
+  picklist: 'Dropdown',
+  multipicklist: 'Multi-select',
   email: 'Email',
   phone: 'Phone',
   url: 'URL',
-  lookup: 'Lookup Relationship',
-  formula: 'Formula',
+  lookup: 'Link',
+  formula: 'Calculated Field',
 };
 
 export type FormulaReturnType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'checkbox';
@@ -179,8 +179,8 @@ export const USER_TOKENS = [
   { token: '$User.Id', label: 'Current user ID' },
   { token: '$User.Email', label: 'Current user email' },
   { token: '$User.Name', label: 'Current user name' },
-  { token: '$User.ProfileId', label: 'Current user profile ID' },
-  { token: '$User.Role', label: 'Current user org role' },
+  { token: '$User.ProfileId', label: 'Current user role ID' },
+  { token: '$User.Role', label: 'Current user workspace role' },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -298,16 +298,16 @@ export type SystemPermissionKey =
   | 'manageBilling';
 
 export const SYSTEM_PERMISSIONS: { key: SystemPermissionKey; label: string; description: string }[] = [
-  { key: 'viewSetup', label: 'View Setup and Configuration', description: 'Open Setup pages and see configuration (read-only).' },
-  { key: 'customizeApplication', label: 'Customize Application', description: 'Create and edit objects, fields, validation rules, restriction rules and page layouts.' },
-  { key: 'manageProfilesPermissionSets', label: 'Manage Profiles and Permission Sets', description: 'Create, edit and delete profiles, permission sets and groups.' },
-  { key: 'manageUsers', label: 'Manage Users', description: 'Assign profiles and permission sets to users.' },
-  { key: 'viewAllData', label: 'View All Data', description: 'See every record in every object, ignoring restriction rules.' },
-  { key: 'modifyAllData', label: 'Modify All Data', description: 'Create, edit and delete every record in every object.' },
-  { key: 'exportData', label: 'Export Data', description: 'Export records with the Data Loader and export report results.' },
-  { key: 'importData', label: 'Import Data', description: 'Insert, update, upsert and delete records in bulk with the Data Loader.' },
+  { key: 'viewSetup', label: 'View Settings and Configuration', description: 'Open Settings pages and see configuration (read-only).' },
+  { key: 'customizeApplication', label: 'Customise Application', description: 'Create and edit modules, fields, check rules, record filters and form layouts.' },
+  { key: 'manageProfilesPermissionSets', label: 'Manage Roles and Access Packs', description: 'Create, edit and delete roles, access packs and access pack groups.' },
+  { key: 'manageUsers', label: 'Manage Users', description: 'Assign roles and access packs to users.' },
+  { key: 'viewAllData', label: 'View All Data', description: 'See every record in every module, ignoring record filters.' },
+  { key: 'modifyAllData', label: 'Modify All Data', description: 'Create, edit and delete every record in every module.' },
+  { key: 'exportData', label: 'Export Data', description: 'Export records with Import & Export and export report results.' },
+  { key: 'importData', label: 'Import Data', description: 'Insert, update, upsert and delete records in bulk with Import & Export.' },
   { key: 'manageReports', label: 'Manage Public Reports & Dashboards', description: 'Create, edit and delete reports and dashboards shared with everyone.' },
-  { key: 'manageSandboxes', label: 'Manage Sandboxes & Deployments', description: 'Create, refresh and delete sandboxes, and deploy changes to production.' },
+  { key: 'manageSandboxes', label: 'Manage Test Workspaces & Deployments', description: 'Create, refresh and delete test workspaces, and deploy changes to production.' },
   { key: 'manageBilling', label: 'Manage Billing', description: 'Change the subscription plan and billing details.' },
 ];
 
@@ -383,7 +383,7 @@ export const FULL_OBJECT_PERMISSION: ObjectPermission = {
   modifyAll: true,
 };
 
-/** Normalise an object permission so dependent permissions stay consistent (Salesforce rules). */
+/** Normalise an object permission so dependent permissions stay consistent. */
 export function normalizeObjectPermission(p: Partial<ObjectPermission>): ObjectPermission {
   const out: ObjectPermission = { ...EMPTY_OBJECT_PERMISSION, ...p };
   if (out.modifyAll) {

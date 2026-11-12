@@ -24,13 +24,13 @@ export const PATCH = route(async (req) => {
 
   const patch: { profileId?: string | null; permissionSetIds?: string[]; permissionSetGroupIds?: string[] } = {};
   if (body.profileId !== undefined) {
-    if (user.orgRole === 'owner') throw new BadRequestError('The workspace owner always has full access; their profile cannot be changed.');
+    if (user.orgRole === 'owner') throw new BadRequestError('The workspace owner always has full access; their role cannot be changed.');
     if (body.profileId === null || body.profileId === '') {
       patch.profileId = null;
     } else {
       const profileId = String(body.profileId);
       if (!mongoose.isValidObjectId(profileId) || !(await Profile.exists({ _id: profileId, orgId: tenant }))) {
-        throw new BadRequestError('Profile not found');
+        throw new BadRequestError('Role not found');
       }
       patch.profileId = profileId;
     }

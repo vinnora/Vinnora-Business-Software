@@ -116,8 +116,8 @@ export default function FieldServicePage() {
   return (
     <>
       <PageHeader
-        title="Field Service"
-        subtitle="Work Orders & Dispatch"
+        title="Field"
+        subtitle="Job Cards & Dispatch"
         count={items.length}
         actions={
           <>
@@ -133,7 +133,7 @@ export default function FieldServicePage() {
               ))}
             </div>
             <button onClick={() => setOpen(true)} className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded">
-              + New Work Order
+              + New Job Card
             </button>
           </>
         }
@@ -153,7 +153,7 @@ export default function FieldServicePage() {
                 >
                   <div className="px-3 py-2 border-b border-gray-200">
                     <div className="text-xs uppercase tracking-wide text-gray-600 font-semibold">{status}</div>
-                    <div className="text-xs text-gray-500">{stageItems.length} orders</div>
+                    <div className="text-xs text-gray-500">{stageItems.length} job cards</div>
                   </div>
                   <div className="p-2 space-y-2 min-h-[100px]">
                     {stageItems.map((o) => (
@@ -221,7 +221,7 @@ export default function FieldServicePage() {
                 <div>
                   <div className="text-sm font-semibold">{tech.name}</div>
                   <div className="text-xs text-gray-500">
-                    {orders.length} orders {tech.skills.length > 0 && `• ${tech.skills.join(', ')}`}
+                    {orders.length} job cards {tech.skills.length > 0 && `• ${tech.skills.join(', ')}`}
                   </div>
                 </div>
               </div>
@@ -263,9 +263,9 @@ export default function FieldServicePage() {
             <table className="w-full text-sm">
               <thead className="bg-[#f3f3f3] text-xs uppercase text-gray-600">
                 <tr>
-                  <th className="text-left px-4 py-2.5">WO #</th>
+                  <th className="text-left px-4 py-2.5">Job Card #</th>
                   <th className="text-left px-4 py-2.5">Subject</th>
-                  <th className="text-left px-4 py-2.5">Account</th>
+                  <th className="text-left px-4 py-2.5">Company</th>
                   <th className="text-left px-4 py-2.5">Status</th>
                   <th className="text-left px-4 py-2.5">Priority</th>
                   <th className="text-left px-4 py-2.5">Technician</th>
@@ -278,7 +278,7 @@ export default function FieldServicePage() {
                 {loading ? (
                   <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">Loading…</td></tr>
                 ) : items.length === 0 ? (
-                  <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">No work orders yet.</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">No job cards yet.</td></tr>
                 ) : (
                   items.map((o) => (
                     <tr key={o._id} className="border-t border-gray-100 hover:bg-blue-50/30">
@@ -315,7 +315,7 @@ export default function FieldServicePage() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="New Work Order"
+        title="New Job Card"
         footer={<>
           <button onClick={() => setOpen(false)} className="px-3 py-1.5 text-sm border border-gray-300 rounded">Cancel</button>
           <button onClick={save} className="px-3 py-1.5 text-sm bg-[#0176d3] text-white rounded">Save</button>
@@ -337,13 +337,13 @@ export default function FieldServicePage() {
               {STATUSES.map((s) => <option key={s}>{s}</option>)}
             </SelectInput>
           </Field>
-          <Field label="Account name">
+          <Field label="Company name">
             <TextInput value={form.accountName || ''} onChange={(e) => setForm({ ...form, accountName: e.target.value })} />
           </Field>
-          <Field label="Contact name">
+          <Field label="Person name">
             <TextInput value={form.contactName || ''} onChange={(e) => setForm({ ...form, contactName: e.target.value })} />
           </Field>
-          <Field label="Contact phone">
+          <Field label="Person phone">
             <TextInput value={form.contactPhone || ''} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} />
           </Field>
           <Field label="Technician">

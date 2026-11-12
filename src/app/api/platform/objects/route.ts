@@ -22,7 +22,7 @@ export const POST = route(async (req) => {
   const pluralLabel = str(body.pluralLabel, 80) || `${label}s`;
   const app = body.app as AppKey;
   if (!label) throw new BadRequestError('Label is required');
-  if (!ALL_APP_KEYS.includes(app)) throw new BadRequestError('Choose the app this object belongs to');
+  if (!ALL_APP_KEYS.includes(app)) throw new BadRequestError('Choose the app this module belongs to');
 
   const apiName = `${toApiName(str(body.apiName, 60).replace(/__c$/, '') || label)}__c`;
   if (getStandardObject(apiName)) throw new BadRequestError(`${apiName} is reserved`);

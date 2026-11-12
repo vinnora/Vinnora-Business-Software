@@ -67,7 +67,7 @@ export default function CasesPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this case?')) return;
+    if (!confirm('Delete this ticket?')) return;
     await actionError.run(() => api(`${API}?id=${id}`, { method: 'DELETE' }));
     reload();
   };
@@ -78,8 +78,8 @@ export default function CasesPage() {
   return (
     <>
       <PageHeader
-        title="Cases"
-        subtitle="Service Console"
+        title="Tickets"
+        subtitle="Desk"
         count={items.length}
         actions={
           <>
@@ -108,7 +108,7 @@ export default function CasesPage() {
                 onClick={() => setEditing('new')}
                 className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded hover:bg-[#014486]"
               >
-                + New Case
+                + New Ticket
               </button>
             )}
           </>
@@ -122,9 +122,9 @@ export default function CasesPage() {
           <table className="w-full text-sm">
             <thead className="bg-[#f3f3f3] text-xs uppercase text-gray-600">
               <tr>
-                <th className="text-left px-4 py-2.5">Case #</th>
+                <th className="text-left px-4 py-2.5">Ticket #</th>
                 <th className="text-left px-4 py-2.5">Subject</th>
-                <th className="text-left px-4 py-2.5">Account</th>
+                <th className="text-left px-4 py-2.5">Company</th>
                 <th className="text-left px-4 py-2.5">Priority</th>
                 <th className="text-left px-4 py-2.5">Status</th>
                 <th className="text-left px-4 py-2.5">Origin</th>
@@ -143,7 +143,7 @@ export default function CasesPage() {
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">No cases yet.</td>
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">No tickets yet.</td>
                 </tr>
               ) : (
                 items.map((c) => (

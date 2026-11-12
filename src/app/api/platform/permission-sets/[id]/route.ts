@@ -13,9 +13,9 @@ import { NotFoundError } from '@/lib/platform/errors';
 type P = { id: string };
 
 async function load(tenant: string, id: string) {
-  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Permission set not found');
+  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Access pack not found');
   const s = await PermissionSet.findOne({ _id: id, orgId: tenant });
-  if (!s) throw new NotFoundError('Permission set not found');
+  if (!s) throw new NotFoundError('Access pack not found');
   return s;
 }
 

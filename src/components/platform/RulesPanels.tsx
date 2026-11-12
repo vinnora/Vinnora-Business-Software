@@ -57,7 +57,7 @@ export function ValidationRulesPanel({ obj, onChanged }: { obj: ObjectDetail; on
     }
   };
   const remove = async (r: ValidationRuleDTO) => {
-    if (!window.confirm(`Delete validation rule "${r.name}"?`)) return;
+    if (!window.confirm(`Delete check rule "${r.name}"?`)) return;
     try {
       await api(`${base}/${r._id}`, { method: 'DELETE' });
       reload();
@@ -70,7 +70,7 @@ export function ValidationRulesPanel({ obj, onChanged }: { obj: ObjectDetail; on
   return (
     <div>
       <SectionTitle
-        title="Validation Rules"
+        title="Check Rules"
         subtitle="Block a save when the rule's condition is TRUE and show your error message to the user."
         actions={
           <Btn variant="primary" onClick={() => setEditing({ ...NEW_VR, objectApiName: obj.apiName })}>
@@ -82,7 +82,7 @@ export function ValidationRulesPanel({ obj, onChanged }: { obj: ObjectDetail; on
       {loading && !data ? (
         <Loading />
       ) : !data?.length ? (
-        <Empty>No validation rules yet.</Empty>
+        <Empty>No check rules yet.</Empty>
       ) : (
         <div className="space-y-2">
           {data.map((r) => {
@@ -174,7 +174,7 @@ function ValidationRuleModal({
       open
       onClose={onClose}
       size="lg"
-      title={form._id ? `Edit Validation Rule` : `New Validation Rule on ${obj.label}`}
+      title={form._id ? `Edit Check Rule` : `New Check Rule on ${obj.label}`}
       footer={
         <>
           <Btn onClick={onClose}>Cancel</Btn>
@@ -291,7 +291,7 @@ export function RestrictionRulesPanel({ obj, onChanged }: { obj: ObjectDetail; o
   const appliesText = (r: RestrictionRuleDTO) =>
     r.appliesTo === 'all'
       ? 'Everyone (except users with View All)'
-      : `${{ profiles: 'Profiles', permissionSets: 'Permission sets', users: 'Users' }[r.appliesTo]}: ${r.appliesToIds.map(nameOf).join(', ')}`;
+      : `${{ profiles: 'Roles', permissionSets: 'Access packs', users: 'Users' }[r.appliesTo]}: ${r.appliesToIds.map(nameOf).join(', ')}`;
 
   const toggle = async (r: RestrictionRuleDTO) => {
     try {
@@ -302,7 +302,7 @@ export function RestrictionRulesPanel({ obj, onChanged }: { obj: ObjectDetail; o
     }
   };
   const remove = async (r: RestrictionRuleDTO) => {
-    if (!window.confirm(`Delete restriction rule "${r.name}"?`)) return;
+    if (!window.confirm(`Delete record filter "${r.name}"?`)) return;
     try {
       await api(`${base}/${r._id}`, { method: 'DELETE' });
       reload();
@@ -317,11 +317,11 @@ export function RestrictionRulesPanel({ obj, onChanged }: { obj: ObjectDetail; o
   return (
     <div>
       <SectionTitle
-        title="Restriction Rules"
+        title="Record Filters"
         subtitle={
           <>
             Limit which {obj.pluralLabel.toLowerCase()} a group of users can see. Matching users only see records that meet the criteria — in lists,
-            lookups, record pages and when editing. Users with View All on this object or View All Data aren&apos;t restricted. If several rules apply
+            links, record pages and when editing. Users with View All on this module or View All Data aren&apos;t restricted. If several filters apply
             to a user, they see records matching any of them.
           </>
         }
@@ -336,20 +336,20 @@ export function RestrictionRulesPanel({ obj, onChanged }: { obj: ObjectDetail; o
               })
             }
           >
-            + New Rule
+            + New Record Filter
           </Btn>
         }
       />
       {!obj.enforced && (
         <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mb-3">
-          Restriction rules on this object apply once its record pages are connected to the platform.
+          Record filters on this module apply once its record pages are connected to the platform.
         </p>
       )}
       <ErrorBanner error={error || actionError} />
       {loading && !data ? (
         <Loading />
       ) : !data?.length ? (
-        <Empty>No restriction rules. Every user with Read access sees all {obj.pluralLabel.toLowerCase()} in the organisation.</Empty>
+        <Empty>No record filters. Every user with Read access sees all {obj.pluralLabel.toLowerCase()} in the workspace.</Empty>
       ) : (
         <div className="space-y-2">
           {data.map((r) => {
@@ -459,7 +459,7 @@ function RestrictionRuleModal({
       open
       onClose={onClose}
       size="lg"
-      title={form._id ? 'Edit Restriction Rule' : `New Restriction Rule on ${obj.label}`}
+      title={form._id ? 'Edit Record Filter' : `New Record Filter on ${obj.label}`}
       footer={
         <>
           <Btn onClick={onClose}>Cancel</Btn>
@@ -490,8 +490,8 @@ function RestrictionRuleModal({
           onChange={(e) => setForm({ ...form, appliesTo: e.target.value as RestrictionAppliesTo, appliesToIds: [] })}
         >
           <option value="all">All users</option>
-          <option value="profiles">Users with these profiles</option>
-          <option value="permissionSets">Users with these permission sets</option>
+          <option value="profiles">Users with these roles</option>
+          <option value="permissionSets">Users with these access packs</option>
           <option value="users">Specific users</option>
         </Select>
         {form.appliesTo !== 'all' && (

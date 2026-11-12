@@ -30,7 +30,7 @@ export const PATCH = route<P>(async (req, { object }) => {
   const { tenant } = await setupContext('customizeApplication');
   const body = await readJson(req);
   const obj = await ObjectDefinition.findOne({ orgId: tenant, apiName: object });
-  if (!obj) throw new BadRequestError('Only custom objects can be edited');
+  if (!obj) throw new BadRequestError('Only custom modules can be edited');
   if (body.label !== undefined) obj.label = str(body.label, 80) || obj.label;
   if (body.pluralLabel !== undefined) obj.pluralLabel = str(body.pluralLabel, 80) || obj.pluralLabel;
   if (body.description !== undefined) obj.description = str(body.description, 1000);
@@ -43,7 +43,7 @@ export const PATCH = route<P>(async (req, { object }) => {
 export const DELETE = route<P>(async (_req, { object }) => {
   const { tenant } = await setupContext('customizeApplication');
   const obj = await ObjectDefinition.findOne({ orgId: tenant, apiName: object });
-  if (!obj) throw new NotFoundError('Custom object not found (built-in objects cannot be deleted)');
+  if (!obj) throw new NotFoundError('Custom module not found (built-in modules cannot be deleted)');
   const scope = { orgId: tenant, objectApiName: obj.apiName };
   await Promise.all([
     FieldDefinition.deleteMany(scope),

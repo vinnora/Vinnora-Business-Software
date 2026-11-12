@@ -32,7 +32,7 @@ export const PUT = route<P>(async (req, { object }) => {
   const body = await readJson<{ assignments?: Record<string, string | null> }>(req);
   const entries = Object.entries(body.assignments || {});
   const layoutIds = entries.map(([, l]) => l).filter((l): l is string => Boolean(l));
-  if (layoutIds.some((l) => !mongoose.isValidObjectId(l))) throw new BadRequestError('Invalid layout');
+  if (layoutIds.some((l) => !mongoose.isValidObjectId(l))) throw new BadRequestError('Invalid form layout');
   const valid = new Set(
     (await PageLayout.find({ _id: { $in: layoutIds }, orgId: tenant, objectApiName: describe.apiName }).select('_id').lean()).map((l) => String(l._id)),
   );
@@ -42,7 +42,7 @@ export const PUT = route<P>(async (req, { object }) => {
       await LayoutAssignment.deleteOne({ orgId: tenant, objectApiName: describe.apiName, profileId });
       continue;
     }
-    if (!valid.has(layoutId)) throw new BadRequestError('Layout not found for this object');
+    if (!valid.has(layoutId)) throw new BadRequestError('Form layout not found for this module');
     await LayoutAssignment.updateOne(
       { orgId: tenant, objectApiName: describe.apiName, profileId },
       { $set: { layoutId } },

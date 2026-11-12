@@ -63,13 +63,13 @@ export const SYSTEM_PROFILES: Record<SystemProfileKey, {
 }> = {
   system_admin: {
     name: 'System Administrator',
-    description: 'Full access to every app, object, field and Setup page.',
+    description: 'Full access to every app, module, field and Settings page.',
     defaultObjectAccess: FULL_OBJECT_PERMISSION,
     systemPermissions: ALL_SYSTEM_PERMS,
   },
   standard_user: {
     name: 'Standard User',
-    description: 'Create, read, edit and delete records. No access to Setup.',
+    description: 'Create, read, edit and delete records. No access to Settings.',
     defaultObjectAccess: { ...EMPTY_OBJECT_PERMISSION, create: true, read: true, edit: true, delete: true },
     systemPermissions: { exportData: true },
   },
@@ -274,7 +274,7 @@ async function computeEffectivePermissions(ctx: AuthContext): Promise<EffectiveP
 export async function requireSystemPermission(ctx: AuthContext, ...keys: SystemPermissionKey[]) {
   const perms = await getEffectivePermissions(ctx);
   if (!keys.some((k) => perms.system[k])) {
-    throw new ForbiddenError('You do not have permission to perform this Setup action.');
+    throw new ForbiddenError('You do not have permission to perform this Settings action.');
   }
   return perms;
 }
@@ -344,7 +344,7 @@ export class ObjectAccess {
   assertApp() {
     if (!this.perms.apps.has(this.object.app)) {
       if (!planApps(this.ctx).has(this.object.app)) throw new ModuleAccessError(this.object.app);
-      throw new ForbiddenError(`Your profile doesn't give you access to the ${this.object.app} app.`);
+      throw new ForbiddenError(`Your role doesn't give you access to the ${this.object.app} app.`);
     }
   }
 
@@ -617,7 +617,7 @@ export class ObjectAccess {
         }
       } catch (e) {
         const msg = e instanceof FormulaError ? e.message : 'evaluation error';
-        errors.push({ message: `Validation rule "${rule.name}" could not be evaluated (${msg}). Ask your administrator to fix it.` });
+        errors.push({ message: `Check rule "${rule.name}" could not be evaluated (${msg}). Ask your administrator to fix it.` });
         continue;
       }
       if (failed) errors.push({ field: (rule.errorField as string) || undefined, message: String(rule.errorMessage) });

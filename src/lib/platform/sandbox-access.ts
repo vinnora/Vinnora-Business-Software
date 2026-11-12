@@ -5,9 +5,9 @@ import type { AuthContext } from '@/lib/auth-helpers';
 import { NotFoundError } from './errors';
 
 export async function loadSandbox(ctx: AuthContext, id: string) {
-  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Sandbox not found');
+  if (!mongoose.isValidObjectId(id)) throw new NotFoundError('Test workspace not found');
   const sbx = await Sandbox.findOne({ _id: id, orgId: ctx.orgId });
-  if (!sbx) throw new NotFoundError('Sandbox not found');
+  if (!sbx) throw new NotFoundError('Test workspace not found');
   return sbx;
 }
 

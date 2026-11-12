@@ -32,7 +32,7 @@ export const PATCH = route<P>(async (req, { id }) => {
 export const DELETE = route<P>(async (_req, { id }) => {
   const { ctx } = await productionContext('manageSandboxes');
   const sbx = await loadSandbox(ctx, id);
-  if (ctx.sandbox?.id === String(sbx._id)) throw new BadRequestError('Switch to Production before deleting this sandbox.');
+  if (ctx.sandbox?.id === String(sbx._id)) throw new BadRequestError('Switch to Production before deleting this test workspace.');
   await deleteSandbox(sbx);
   return NextResponse.json({ success: true });
 });

@@ -20,7 +20,7 @@ function parseSelection(body: Record<string, unknown>) {
 export const POST = route<P>(async (req, { id }) => {
   const { ctx, prodTenant } = await productionContext('manageSandboxes');
   const sbx = await loadSandbox(ctx, id);
-  if (sbx.status !== 'ready') throw new BadRequestError('Sandbox is not ready');
+  if (sbx.status !== 'ready') throw new BadRequestError('Test workspace is not ready');
   const body = await readJson(req);
   const selected = parseSelection(body);
 

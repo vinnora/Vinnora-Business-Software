@@ -232,7 +232,7 @@ export async function runReport(ctx: AuthContext, def: ReportDefinition): Promis
     and.push({ [byApi.ownerId.path]: ctx.userId });
   }
   const model = access.object.isCustom ? CustomRecord : getStandardObject(access.object.apiName)?.model;
-  if (!model) throw new NotFoundError('Unknown object');
+  if (!model) throw new NotFoundError('Unknown module');
 
   const sortPath = def.sort && fieldPerm(def.sort.field) ? (byApi[def.sort.field]?.path ?? def.sort.field) : 'updatedAt';
   const sortDir = def.sort?.dir === 'asc' ? 1 : -1;

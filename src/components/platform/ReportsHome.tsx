@@ -25,7 +25,7 @@ export function ReportsHome() {
     <ThemeScope theme={MODULE_THEMES.setup}>
       <SectionTitle
         title="Reports & Dashboards"
-        subtitle="Build reports on Sales & Service and custom objects, and combine them into dashboards. Everyone sees only the records and fields their access allows."
+        subtitle="Build reports on Sell & Support and custom modules, and combine them into dashboards. Everyone sees only the records and fields their access allows."
         actions={
           <>
             <Input className="!w-56" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -61,7 +61,7 @@ export function ReportsHome() {
                 head={
                   <tr>
                     <th className={th}>Report</th>
-                    <th className={th}>Object</th>
+                    <th className={th}>Module</th>
                     <th className={th}>Format</th>
                     <th className={th}>Folder</th>
                     <th className={th}>Owner</th>

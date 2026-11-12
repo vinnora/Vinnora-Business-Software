@@ -68,7 +68,7 @@ export async function PATCH(req: NextRequest) {
     if (!mongoose.isValidObjectId(_id)) throw new BadRequestError('Invalid _id');
 
     const existing = await Opportunity.findOne({ $and: [{ _id }, await access.readFilter()] });
-    if (!existing) throw new NotFoundError('Opportunity not found');
+    if (!existing) throw new NotFoundError('Deal not found');
 
     if (updates.stage) delete updates.probability; // derived from stage below
     const prepared = await access.prepareWrite(updates, existing, { passthrough: true });
@@ -105,7 +105,7 @@ export async function DELETE(req: NextRequest) {
     if (!mongoose.isValidObjectId(id)) throw new BadRequestError('Invalid id');
 
     const existing = await Opportunity.findOne({ $and: [{ _id: id }, await access.readFilter()] });
-    if (!existing) throw new NotFoundError('Opportunity not found');
+    if (!existing) throw new NotFoundError('Deal not found');
     access.assert('delete');
 
     await Opportunity.deleteOne({ _id: existing._id });

@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(campaign, { status: 201 });
   } catch (error: any) {
     console.error('Error creating campaign:', error);
-    return NextResponse.json({ error: error.message || 'Failed to create campaign' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to create promotion' }, { status: 500 });
   }
 }
 

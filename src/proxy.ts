@@ -21,7 +21,7 @@ export function proxy(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'This part of Vinnora is not available in a sandbox yet. Switch back to Production to use it.',
+            'This part of Vinnora is not available in a test workspace yet. Switch back to Production to use it.',
           code: 'SANDBOX_UNSUPPORTED',
         },
         { status: 409 },

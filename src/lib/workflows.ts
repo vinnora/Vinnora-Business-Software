@@ -92,7 +92,7 @@ async function executeAction(
       await Activity.create({
         ...owner,
         type: 'Email',
-        subject: interpolate(params.subject || `Email to ${record.email ?? 'contact'}`, record),
+        subject: interpolate(params.subject || `Email to ${record.email ?? 'customer'}`, record),
         status: 'Completed',
         completedAt: new Date(),
         relatedToType: objectType,

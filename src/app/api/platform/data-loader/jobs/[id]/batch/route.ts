@@ -23,7 +23,7 @@ export const POST = route<P>(async (req, { id }) => {
   if (job.operation === 'export') throw new BadRequestError('Export jobs have no batches.');
   if (job.status !== 'running') throw new BadRequestError('This job has already finished.');
   const perms = await getEffectivePermissions(ctx);
-  if (!perms.system.importData) throw new ForbiddenError('You need the Import Data permission to use the Data Loader.');
+  if (!perms.system.importData) throw new ForbiddenError('You need the Import Data permission to use Import & Export.');
 
   const body = await readJson(req);
   if (!Array.isArray(body.rows)) throw new BadRequestError('rows must be an array');

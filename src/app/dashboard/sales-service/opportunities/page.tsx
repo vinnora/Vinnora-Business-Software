@@ -67,7 +67,7 @@ export default function OpportunitiesPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this opportunity?')) return;
+    if (!confirm('Delete this deal?')) return;
     await actionError.run(() => api(`${API}?id=${id}`, { method: 'DELETE' }));
     reload();
   };
@@ -79,7 +79,7 @@ export default function OpportunitiesPage() {
   return (
     <>
       <PageHeader
-        title="Opportunities"
+        title="Deals"
         subtitle="Sales Pipeline"
         count={items.length}
         actions={
@@ -179,8 +179,8 @@ export default function OpportunitiesPage() {
               <thead className="bg-[#f3f3f3] text-xs uppercase text-gray-600">
                 <tr>
                   <th className="text-left px-4 py-2.5">Name</th>
-                  <th className="text-left px-4 py-2.5">Account</th>
-                  <th className="text-left px-4 py-2.5">Stage</th>
+                  <th className="text-left px-4 py-2.5">Company</th>
+                  <th className="text-left px-4 py-2.5">Deal Stage</th>
                   <th className="text-right px-4 py-2.5">Amount</th>
                   <th className="text-right px-4 py-2.5">Prob</th>
                   <th className="text-left px-4 py-2.5">Close Date</th>
@@ -198,7 +198,7 @@ export default function OpportunitiesPage() {
                   </tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">No opportunities yet.</td>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">No deals yet.</td>
                   </tr>
                 ) : (
                   items.map((o) => (

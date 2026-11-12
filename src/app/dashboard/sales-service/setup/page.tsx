@@ -7,7 +7,6 @@ import { SubscriptionPlan } from '@/components/SubscriptionPlan';
 import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
 
 type Tab =
-  | 'picklists'
   | 'workflows'
   | 'templates'
   | 'slas'
@@ -18,24 +17,23 @@ type Tab =
   | 'objects' | 'access' | 'subscription';
 
 const TABS: { id: Tab; label: string; desc: string }[] = [
-  { id: 'picklists', label: 'Picklists', desc: 'Customize stages, statuses, sources, types' },
   { id: 'workflows', label: 'Workflows & Automation', desc: 'Rules that fire on record events' },
   { id: 'templates', label: 'Email Templates', desc: 'Reusable templates with merge fields' },
-  { id: 'slas', label: 'SLAs', desc: 'Service level agreements for cases' },
-  { id: 'technicians', label: 'Technicians', desc: 'Field service team roster' },
-  { id: 'channels', label: 'Channels', desc: 'Inbound channels & web-to-case' },
+  { id: 'slas', label: 'SLAs', desc: 'Service level agreements for tickets' },
+  { id: 'technicians', label: 'Technicians', desc: 'Field team roster' },
+  { id: 'channels', label: 'Channels', desc: 'Inbound channels & Email-to-Ticket' },
   { id: 'integrations', label: 'Integrations', desc: 'Third-party apps & services' },
   { id: 'connections', label: 'App Connections', desc: 'Cross-app data flows' },
-  { id: 'objects', label: 'Object Manager', desc: 'Objects, fields, rules & page layouts' },
-  { id: 'access', label: 'Users & Access', desc: 'Profiles & permission sets' },
+  { id: 'objects', label: 'Data Model', desc: 'Modules, fields, dropdowns, rules & layouts' },
+  { id: 'access', label: 'Users & Access', desc: 'Roles & access packs' },
   { id: 'subscription', label: 'Subscription & Plan', desc: 'Manage your plan & billing' },
 ];
 
 export default function SetupPage() {
-  const [tab, setTab] = useState<Tab>('picklists');
+  const [tab, setTab] = useState<Tab>('workflows');
   return (
     <>
-      <PageHeader title="Setup" subtitle="Customize your CRM" />
+      <PageHeader title="Settings" subtitle="Customize your CRM" />
       <div className="flex">
         <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-7rem)]">
           <div className="p-3 text-xs uppercase tracking-wide text-gray-500 font-semibold">
@@ -57,7 +55,6 @@ export default function SetupPage() {
           ))}
         </aside>
         <div className="flex-1 p-6">
-          {tab === 'picklists' && <PicklistsTab />}
           {tab === 'workflows' && <WorkflowsTab />}
           {tab === 'templates' && <TemplatesTab />}
           {tab === 'slas' && <SlasTab />}
@@ -74,162 +71,17 @@ export default function SetupPage() {
   );
 }
 
-/* -------------------- Picklists -------------------- */
-
-const PICKLIST_KEYS = [
-  { key: 'lead.status', label: 'Lead Status' },
-  { key: 'lead.source', label: 'Lead Source' },
-  { key: 'lead.rating', label: 'Lead Rating' },
-  { key: 'opportunity.stage', label: 'Opportunity Stage' },
-  { key: 'opportunity.type', label: 'Opportunity Type' },
-  { key: 'case.status', label: 'Case Status' },
-  { key: 'case.priority', label: 'Case Priority' },
-  { key: 'case.origin', label: 'Case Origin' },
-  { key: 'case.type', label: 'Case Type' },
-  { key: 'account.industry', label: 'Account Industry' },
-  { key: 'account.type', label: 'Account Type' },
-  { key: 'workOrder.status', label: 'Work Order Status' },
-];
-
-function PicklistsTab() {
-  const [selectedKey, setSelectedKey] = useState(PICKLIST_KEYS[0].key);
-  const [values, setValues] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [newValue, setNewValue] = useState('');
-  const [newColor, setNewColor] = useState('');
-
-  const load = async () => {
-    setLoading(true);
-    const data = await fetch(`/api/sales-service/picklists?key=${selectedKey}`).then((r) => r.json());
-    setValues(Array.isArray(data) ? data : []);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    load();
-  }, [selectedKey]);
-
-  const add = async () => {
-    if (!newValue) return;
-    await fetch('/api/sales-service/picklists', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        picklistKey: selectedKey,
-        value: newValue,
-        label: newValue,
-        order: values.length,
-        color: newColor || undefined,
-      }),
-    });
-    setNewValue('');
-    setNewColor('');
-    load();
-  };
-
-  const remove = async (id: string) => {
-    await fetch(`/api/sales-service/picklists?id=${id}`, { method: 'DELETE' });
-    load();
-  };
-
-  const toggle = async (v: any) => {
-    await fetch('/api/sales-service/picklists', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ _id: v._id, active: !v.active }),
-    });
-    load();
-  };
-
-  return (
-    <div>
-      <h2 className="text-lg font-semibold mb-1">Picklist Values</h2>
-      <p className="text-sm text-gray-500 mb-4">
-        Define the values users can pick. These override the built-in defaults across the app.
-      </p>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-1 bg-white border border-gray-200 rounded">
-          {PICKLIST_KEYS.map((k) => (
-            <button
-              key={k.key}
-              onClick={() => setSelectedKey(k.key)}
-              className={`w-full text-left px-3 py-2 text-sm border-b border-gray-100 ${
-                selectedKey === k.key ? 'bg-blue-50 text-[#0176d3]' : 'hover:bg-gray-50'
-              }`}
-            >
-              {k.label}
-            </button>
-          ))}
-        </div>
-        <div className="col-span-2 bg-white border border-gray-200 rounded p-4">
-          <div className="flex gap-2 mb-4">
-            <input
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-              placeholder="New value…"
-              className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded"
-            />
-            <input
-              type="color"
-              value={newColor || '#0176d3'}
-              onChange={(e) => setNewColor(e.target.value)}
-              className="w-10 h-8 border border-gray-300 rounded cursor-pointer"
-              title="Optional color tag"
-            />
-            <button
-              onClick={add}
-              className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded"
-            >
-              Add
-            </button>
-          </div>
-          {loading ? (
-            <div className="text-sm text-gray-500">Loading…</div>
-          ) : values.length === 0 ? (
-            <div className="text-sm text-gray-500">
-              No custom values yet. The app will fall back to built-in defaults.
-            </div>
-          ) : (
-            <ul className="space-y-1">
-              {values.map((v) => (
-                <li
-                  key={v._id}
-                  className="flex items-center gap-2 px-3 py-2 border border-gray-100 rounded"
-                >
-                  {v.color && (
-                    <span
-                      className="w-3 h-3 rounded-full"
-                      style={{ background: v.color }}
-                    />
-                  )}
-                  <span className={`flex-1 text-sm ${!v.active && 'text-gray-400 line-through'}`}>
-                    {v.label}
-                  </span>
-                  <button
-                    onClick={() => toggle(v)}
-                    className="text-xs text-gray-500 hover:text-gray-800"
-                  >
-                    {v.active ? 'Disable' : 'Enable'}
-                  </button>
-                  <button
-                    onClick={() => remove(v._id)}
-                    className="text-xs text-red-600"
-                  >
-                    Delete
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* -------------------- Workflows -------------------- */
 
 const WORKFLOW_OBJECTS = ['Lead', 'Opportunity', 'Case', 'Contact', 'Account'];
+// Display names for the object API names above (stored values stay unchanged).
+const OBJECT_LABELS: Record<string, string> = {
+  Lead: 'Enquiry',
+  Opportunity: 'Deal',
+  Case: 'Ticket',
+  Contact: 'Person',
+  Account: 'Company',
+};
 const WORKFLOW_EVENTS = [
   { value: 'created', label: 'When record is created' },
   { value: 'updated', label: 'When record is updated' },
@@ -245,12 +97,12 @@ const OPERATORS = [
   { value: 'isNotEmpty', label: 'is not empty' },
 ];
 const ACTION_TYPES = [
-  { value: 'createActivity', label: 'Create Activity / Task' },
+  { value: 'createActivity', label: 'Create Follow-up / To-do' },
   { value: 'updateField', label: 'Update field' },
   { value: 'assignOwner', label: 'Assign owner' },
   { value: 'sendEmail', label: 'Send email (logged)' },
-  { value: 'escalateCase', label: 'Escalate case' },
-  { value: 'createWorkOrder', label: 'Create Work Order (from Case)' },
+  { value: 'escalateCase', label: 'Escalate ticket' },
+  { value: 'createWorkOrder', label: 'Create Job Card (from Ticket)' },
   { value: 'webhook', label: 'Outbound webhook' },
 ];
 
@@ -373,7 +225,7 @@ function WorkflowsTab() {
                 <div className="flex items-center gap-2">
                   <span className={`inline-block w-2 h-2 rounded-full ${r.active ? 'bg-green-500' : 'bg-gray-300'}`} />
                   <span className="font-semibold text-gray-900">{r.name}</span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-gray-100">{r.objectType}</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-gray-100">{OBJECT_LABELS[r.objectType] || r.objectType}</span>
                   <span className="text-xs text-gray-500">{r.triggerEvent}</span>
                 </div>
                 {r.description && <div className="text-sm text-gray-600 mt-1">{r.description}</div>}
@@ -412,9 +264,9 @@ function WorkflowsTab() {
           <TextInput value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Object">
+          <Field label="Module">
             <SelectInput value={form.objectType} onChange={(e) => setForm({ ...form, objectType: e.target.value })}>
-              {WORKFLOW_OBJECTS.map((o) => <option key={o}>{o}</option>)}
+              {WORKFLOW_OBJECTS.map((o) => <option key={o} value={o}>{OBJECT_LABELS[o] || o}</option>)}
             </SelectInput>
           </Field>
           <Field label="Trigger">
@@ -576,7 +428,7 @@ function TemplatesTab() {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-semibold">{t.name}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{t.category || 'Uncategorized'} • {t.objectType || 'Any'}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{t.category || 'Uncategorized'} • {OBJECT_LABELS[t.objectType] || t.objectType || 'Any'}</div>
                     <div className="text-sm text-gray-700 mt-2"><strong>Subject:</strong> {t.subject}</div>
                     <div className="text-sm text-gray-600 mt-1 line-clamp-2 whitespace-pre-wrap">{t.body}</div>
                   </div>
@@ -595,10 +447,10 @@ function TemplatesTab() {
         <Field label="Name" required><TextInput value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Category"><TextInput value={form.category || ''} onChange={(e) => setForm({ ...form, category: e.target.value })} /></Field>
-          <Field label="Object">
+          <Field label="Module">
             <SelectInput value={form.objectType || ''} onChange={(e) => setForm({ ...form, objectType: e.target.value })}>
               <option value="">Any</option>
-              {['Lead', 'Contact', 'Account', 'Opportunity', 'Case'].map((o) => <option key={o}>{o}</option>)}
+              {['Lead', 'Contact', 'Account', 'Opportunity', 'Case'].map((o) => <option key={o} value={o}>{OBJECT_LABELS[o] || o}</option>)}
             </SelectInput>
           </Field>
         </div>
@@ -644,7 +496,7 @@ function SlasTab() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold">Service Level Agreements</h2>
-          <p className="text-sm text-gray-500">Auto-applied to new cases by priority.</p>
+          <p className="text-sm text-gray-500">Auto-applied to new tickets by priority.</p>
         </div>
         <button onClick={() => setOpen(true)} className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded">+ New SLA</button>
       </div>
@@ -743,8 +595,8 @@ function TechniciansTab() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold">Field Service Technicians</h2>
-          <p className="text-sm text-gray-500">Roster used to assign work orders.</p>
+          <h2 className="text-lg font-semibold">Field Technicians</h2>
+          <p className="text-sm text-gray-500">Roster used to assign job cards.</p>
         </div>
         <button onClick={() => setOpen(true)} className="px-3 py-1.5 bg-[#0176d3] text-white text-sm rounded">+ New Technician</button>
       </div>
@@ -770,7 +622,7 @@ function TechniciansTab() {
                   )}
                   {t.territories?.length > 0 && (
                     <div className="text-xs text-gray-600">
-                      Territories: {t.territories.join(', ')}
+                      Regions: {t.territories.join(', ')}
                     </div>
                   )}
                 </div>
@@ -791,7 +643,7 @@ function TechniciansTab() {
           <Field label="Hourly rate (₹)"><TextInput type="number" value={form.hourlyRate || ''} onChange={(e) => setForm({ ...form, hourlyRate: Number(e.target.value) })} /></Field>
         </div>
         <Field label="Skills (comma-separated)"><TextInput value={form.skills || ''} onChange={(e) => setForm({ ...form, skills: e.target.value })} /></Field>
-        <Field label="Territories (comma-separated)"><TextInput value={form.territories || ''} onChange={(e) => setForm({ ...form, territories: e.target.value })} /></Field>
+        <Field label="Regions (comma-separated)"><TextInput value={form.territories || ''} onChange={(e) => setForm({ ...form, territories: e.target.value })} /></Field>
       </Modal>
     </div>
   );
@@ -828,9 +680,9 @@ function ChannelsTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Omnichannel Inbound</h2>
+        <h2 className="text-lg font-semibold">Inbound Channels</h2>
         <p className="text-sm text-gray-500">
-          Any message posted to the inbound endpoint becomes a Case. Sentiment is auto-analyzed
+          Any message posted to the inbound endpoint becomes a Ticket. Sentiment is auto-analyzed
           and priority is bumped to High when negative or urgent keywords appear.
         </p>
       </div>
@@ -846,7 +698,7 @@ function ChannelsTab() {
       </div>
 
       <div className="bg-white border border-gray-200 rounded p-4">
-        <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Web-to-Case form snippet</div>
+        <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Website ticket form snippet</div>
         <pre className="text-xs font-mono bg-gray-50 p-3 rounded overflow-x-auto whitespace-pre-wrap">{webForm}</pre>
       </div>
 
@@ -929,7 +781,7 @@ function SalesConnectionsTab() {
   return (
     <div>
       <h2 className="text-lg font-semibold text-gray-900 mb-1">App Connections</h2>
-      <p className="text-sm text-gray-500 mb-4">Cross-module data flows involving Sales & Service.</p>
+      <p className="text-sm text-gray-500 mb-4">Cross-module data flows involving Sell & Support.</p>
       {loading ? <div className="text-gray-500">Loading…</div> : items.length === 0 ? (
         <div className="text-gray-500 text-center py-8">No connections configured. Run seed-defaults to create default connections.</div>
       ) : (

@@ -13,10 +13,10 @@ import {
 /* ------------------------------------------------------------------ */
 
 const MODULES = [
-  { name: 'Sales & Service', icon: SalesServiceIcon, desc: 'CRM, pipelines, omnichannel cases and field service.', color: '#0077B6', bg: '#E0F4F8' },
+  { name: 'Sell & Support', icon: SalesServiceIcon, desc: 'CRM, enquiries, deals, quotations, tickets and field service.', color: '#0077B6', bg: '#E0F4F8' },
   { name: 'Accounting', icon: AccountingIcon, desc: 'Ledger, invoices, payroll, taxes and reports.', color: '#2D6A4F', bg: '#D8F3DC' },
   { name: 'Inventory', icon: InventoryIcon, desc: 'Stock, forecasting, warehouses and procurement.', color: '#B14411', bg: '#FFF1D6' },
-  { name: 'Marketing', icon: MarketingIcon, desc: 'Campaigns, segmentation and pricing strategy.', color: '#5A7A8C', bg: '#E8F1F5' },
+  { name: 'Marketing', icon: MarketingIcon, desc: 'Promotions, segmentation and pricing strategy.', color: '#5A7A8C', bg: '#E8F1F5' },
   { name: 'HRM', icon: HrmIcon, desc: 'Recruitment, employee records and performance.', color: '#8B6F47', bg: '#F2E4CF' },
   { name: 'Manufacturing', icon: ManufacturingIcon, desc: 'Production, BOM, quality control and shop floor.', color: '#4A4E54', bg: '#F3F4F6' },
 ];
@@ -29,7 +29,7 @@ const PAIN_POINTS = [
 ];
 
 const FEATURES_COMPARE = [
-  { feature: 'CRM & Sales Pipeline', vinnora: true, separate: 'Zoho CRM / Salesforce' },
+  { feature: 'CRM & Sales Pipeline', vinnora: true, separate: 'Zoho CRM / other CRM software' },
   { feature: 'Accounting & GST', vinnora: true, separate: 'Tally / QuickBooks' },
   { feature: 'Inventory & Warehousing', vinnora: true, separate: 'Zoho Inventory / Unicommerce' },
   { feature: 'Marketing Automation', vinnora: true, separate: 'Mailchimp / HubSpot' },
@@ -192,17 +192,17 @@ export default function Home() {
             <div className="text-[10px] uppercase tracking-[0.25em] text-gray-400 mb-2">Integrated by Design</div>
             <h2 className="text-3xl sm:text-4xl font-bold">Your apps talk to each other. Automatically.</h2>
             <p className="mt-4 text-gray-400 max-w-2xl mx-auto">
-              Close a deal in Sales? An invoice appears in Accounting. Hire someone in HR? They show up in CRM.
-              Run low on stock? Sales gets an alert. That&apos;s Vinnora.
+              Close a deal in Sell &amp; Support? An invoice appears in Accounting. Hire someone in HR? They show up in CRM.
+              Run low on stock? Sell &amp; Support gets an alert. That&apos;s Vinnora.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { from: 'Sales', to: 'Accounting', flow: 'Closed deal auto-creates invoice with line items, tax, and customer mapped.' },
-              { from: 'Marketing', to: 'Sales', flow: 'Qualified leads automatically appear in the sales pipeline, scored and tagged.' },
-              { from: 'HR', to: 'Sales', flow: 'New employees auto-create CRM contacts. Exit triggers offboarding workflows.' },
-              { from: 'Inventory', to: 'Sales', flow: 'Low stock alerts notify account managers. Out-of-stock pauses quoting.' },
+              { from: 'Sell & Support', to: 'Accounting', flow: 'Closed deal auto-creates invoice with line items, tax, and customer mapped.' },
+              { from: 'Marketing', to: 'Sell & Support', flow: 'Qualified enquiries automatically appear in the sales pipeline, scored and tagged.' },
+              { from: 'HR', to: 'Sell & Support', flow: 'New employees auto-create CRM people records. Exit triggers offboarding workflows.' },
+              { from: 'Inventory', to: 'Sell & Support', flow: 'Low stock alerts notify account managers. Out-of-stock pauses quoting.' },
               { from: 'HR Payroll', to: 'Accounting', flow: 'Processed payroll auto-posts salary expense entries to the general ledger.' },
               { from: 'Manufacturing', to: 'Inventory', flow: 'Completed work orders update finished goods stock. QC failures flag materials.' },
             ].map((c) => (
@@ -269,7 +269,7 @@ export default function Home() {
               <p className="text-xs text-gray-500 mb-5">&#8377;4,488/user/year billed annually</p>
               <ul className="space-y-3 text-sm text-gray-300 mb-8">
                 <li className="flex items-start gap-2"><span className="text-[#48CAE4] font-bold mt-0.5">&#10003;</span> <strong className="text-white">All 6 apps</strong> &mdash; fully integrated</li>
-                <li className="flex items-start gap-2"><span className="text-[#48CAE4] font-bold mt-0.5">&#10003;</span> Cross-app connections (Sales &#8594; Accounting, etc.)</li>
+                <li className="flex items-start gap-2"><span className="text-[#48CAE4] font-bold mt-0.5">&#10003;</span> Cross-app connections (Sell &amp; Support &#8594; Accounting, etc.)</li>
                 <li className="flex items-start gap-2"><span className="text-[#48CAE4] font-bold mt-0.5">&#10003;</span> Unified dashboard &amp; reporting</li>
                 <li className="flex items-start gap-2"><span className="text-[#48CAE4] font-bold mt-0.5">&#10003;</span> All workflows &amp; automations</li>
                 <li className="flex items-start gap-2"><span className="text-[#48CAE4] font-bold mt-0.5">&#10003;</span> All integrations (WhatsApp, Tally, SAP&hellip;)</li>
@@ -368,7 +368,7 @@ export default function Home() {
               <div className="text-xs uppercase tracking-wide text-red-500 font-bold mb-4">Separate Tools (10 users)</div>
               <div className="space-y-3">
                 {[
-                  { tool: 'CRM (Salesforce/Zoho)', cost: '₹1,500/user' },
+                  { tool: 'CRM (Zoho or similar)', cost: '₹1,500/user' },
                   { tool: 'Accounting (Tally/QB)', cost: '₹800/user' },
                   { tool: 'Inventory (Unicommerce)', cost: '₹1,200/user' },
                   { tool: 'Marketing (HubSpot)', cost: '₹2,000/user' },
@@ -452,7 +452,7 @@ export default function Home() {
             {[
               { title: 'Flexible for any business', body: 'Whether you run a 5-person startup or a 500-person manufacturer, Vinnora adapts. Pick the apps you need, customize workflows, and scale at your own pace.', icon: '🔧' },
               { title: 'India-first compliance', body: 'GST, TDS, PAN, HRA, PF, Aadhaar, E-Way Bills — not bolted on as plugins but built into the core. Works out of the box for Indian businesses.', icon: '🇮🇳' },
-              { title: 'No-code automations', body: 'Set up email alerts, auto-assign leads, create invoices on deal close, trigger onboarding — all without writing a single line of code.', icon: '⚡' },
+              { title: 'No-code automations', body: 'Set up email alerts, auto-assign enquiries, create invoices on deal close, trigger onboarding — all without writing a single line of code.', icon: '⚡' },
               { title: 'One source of truth', body: 'No more conflicting reports from different tools. Every app reads from and writes to the same database, so your numbers always match.', icon: '🎯' },
               { title: 'Open integrations', body: 'Connect WhatsApp, Tally, Zoho, SAP, ShipRocket, Slack, and more. Use webhooks and API tokens to plug in anything else.', icon: '🔌' },
               { title: 'Start free, grow later', body: 'Begin with one app at zero cost. When you outgrow it, add more apps or switch to All-in-One. No lock-in, no forced upgrades.', icon: '🌱' },

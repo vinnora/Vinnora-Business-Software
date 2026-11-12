@@ -32,7 +32,7 @@ export function LayoutsPanel({ obj, onChanged }: { obj: ObjectDetail; onChanged:
     }
   };
   const remove = async (l: PageLayoutDTO) => {
-    if (!window.confirm(`Delete layout "${l.name}"?`)) return;
+    if (!window.confirm(`Delete form layout "${l.name}"?`)) return;
     try {
       await api(`${base}/${l._id}`, { method: 'DELETE' });
       refresh();
@@ -59,11 +59,11 @@ export function LayoutsPanel({ obj, onChanged }: { obj: ObjectDetail; onChanged:
   return (
     <div>
       <SectionTitle
-        title="Page Layouts"
-        subtitle="Arrange fields into sections and choose which are required or read-only on the record form. Assign layouts to profiles in Layout Assignment."
+        title="Form Layouts"
+        subtitle="Arrange fields into sections and choose which are required or read-only on the record form. Assign form layouts to roles in Form Layout Assignment."
         actions={
           <Btn variant="primary" onClick={() => setCreating(true)}>
-            + New Layout
+            + New Form Layout
           </Btn>
         }
       />
@@ -73,11 +73,11 @@ export function LayoutsPanel({ obj, onChanged }: { obj: ObjectDetail; onChanged:
       ) : layouts.length === 0 ? (
         <Empty>
           <p className="mb-3">
-            {obj.label} uses the automatic layout: every field, grouped into standard sections. Create a layout to rearrange fields, set required or
-            read-only fields, and give different profiles different layouts.
+            {obj.label} uses the automatic form layout: every field, grouped into standard sections. Create a form layout to rearrange fields, set required or
+            read-only fields, and give different roles different form layouts.
           </p>
           <Btn variant="primary" onClick={() => setCreating(true)}>
-            Create layout from automatic layout
+            Create form layout from automatic layout
           </Btn>
         </Empty>
       ) : (
@@ -171,7 +171,7 @@ function NewLayoutModal({
     <Modal
       open
       onClose={onClose}
-      title="New Page Layout"
+      title="New Form Layout"
       footer={
         <>
           <Btn onClick={onClose}>Cancel</Btn>
@@ -435,7 +435,7 @@ function LayoutEditor({
                       <select
                         value={locked || it.behavior}
                         disabled={Boolean(locked)}
-                        title={locked ? (locked === 'required' ? 'Required by the field definition' : 'System / formula fields are read-only') : undefined}
+                        title={locked ? (locked === 'required' ? 'Required by the field definition' : 'System / calculated fields are read-only') : undefined}
                         onChange={(e) =>
                           updateSection(si, {
                             items: s.items.map((x, idx) => (idx === ii ? { ...x, behavior: e.target.value as LayoutBehavior } : x)),
@@ -498,8 +498,8 @@ export function LayoutAssignmentPanel({ obj }: { obj: ObjectDetail }) {
   return (
     <div>
       <SectionTitle
-        title="Layout Assignment"
-        subtitle="Choose which page layout each profile sees on new and existing records."
+        title="Form Layout Assignment"
+        subtitle="Choose which form layout each role sees on new and existing records."
         actions={
           <Btn variant="primary" onClick={save} disabled={!Object.keys(changes).length}>
             Save Assignments
@@ -509,15 +509,15 @@ export function LayoutAssignmentPanel({ obj }: { obj: ObjectDetail }) {
       <ErrorBanner error={error || saveError} />
       {saved && !Object.keys(changes).length && <div className="text-xs text-green-700 mb-2">Assignments saved.</div>}
       {layouts.length === 0 ? (
-        <Empty>Create a page layout first. Until then every profile sees the automatic layout.</Empty>
+        <Empty>Create a form layout first. Until then every role sees the automatic layout.</Empty>
       ) : loading && !rows ? (
         <Loading />
       ) : (
         <Table
           head={
             <tr>
-              <th className={th}>Profile</th>
-              <th className={th}>Page Layout</th>
+              <th className={th}>Role</th>
+              <th className={th}>Form Layout</th>
             </tr>
           }
         >

@@ -24,10 +24,10 @@ export const POST = route(async (req) => {
   const { tenant } = await setupContext('manageProfilesPermissionSets');
   const body = await readJson(req);
   const name = str(body.name, 80);
-  if (!name) throw new BadRequestError('Profile name is required');
-  if (!body.cloneFrom || !mongoose.isValidObjectId(body.cloneFrom)) throw new BadRequestError('Choose a profile to clone');
+  if (!name) throw new BadRequestError('Role name is required');
+  if (!body.cloneFrom || !mongoose.isValidObjectId(body.cloneFrom)) throw new BadRequestError('Choose a role to clone');
   const src = await Profile.findOne({ _id: body.cloneFrom, orgId: tenant }).lean();
-  if (!src) throw new NotFoundError('Source profile not found');
+  if (!src) throw new NotFoundError('Source role not found');
 
   const fromAdmin = src.key === 'system_admin';
   const profile = await Profile.create({
