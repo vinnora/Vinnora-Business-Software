@@ -6,7 +6,7 @@ import QuickStart from '@/components/QuickStart';
 import { QUICK_START } from '@/lib/quick-start-steps';
 
 const NAV = [
-  { href: '/dashboard/sales-service', label: 'Today', icon: 'home' },
+  { href: '/dashboard/sales-service', label: 'Home', icon: 'home' },
   { href: '/dashboard/sales-service/accounts', label: 'Companies', icon: 'briefcase' },
   { href: '/dashboard/sales-service/contacts', label: 'People', icon: 'user' },
   { href: '/dashboard/sales-service/leads', label: 'Enquiries', icon: 'spark' },
