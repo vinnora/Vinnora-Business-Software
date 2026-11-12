@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Account from '@/models/Account';
 import Contact from '@/models/Contact';
@@ -8,12 +6,12 @@ import Lead from '@/models/Lead';
 import Opportunity from '@/models/Opportunity';
 import Activity from '@/models/Activity';
 import Case from '@/models/Case';
+import { getTenant, apiError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('sales-service');
 
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type') || 'dashboard-summary';
@@ -30,33 +28,28 @@ export async function GET(req: NextRequest) {
           openCases,
           overdueActivities,
         ] = await Promise.all([
-          Account.countDocuments({ userId }),
-          Contact.countDocuments({ userId }),
-          Lead.countDocuments({
-            userId,
+          Account.countDocuments(t.where()),
+          Contact.countDocuments(t.where()),
+          Lead.countDocuments(t.where({
             status: { $nin: ['Converted', 'Unqualified'] },
-          }),
-          Opportunity.countDocuments({
-            userId,
+          })),
+          Opportunity.countDocuments(t.where({
             stage: { $nin: ['Closed Won', 'Closed Lost'] },
-          }),
-          Case.countDocuments({
-            userId,
+          })),
+          Case.countDocuments(t.where({
             status: { $nin: ['Resolved', 'Closed'] },
-          }),
-          Activity.countDocuments({
-            userId,
+          })),
+          Activity.countDocuments(t.where({
             status: { $in: ['Open', 'In Progress'] },
             dueDate: { $lt: new Date() },
-          }),
+          })),
         ]);
 
         const pipeline = await Opportunity.aggregate([
           {
-            $match: {
-              userId,
+            $match: t.where({
               stage: { $nin: ['Closed Won', 'Closed Lost'] },
-            },
+            }),
           },
           {
             $group: {
@@ -71,13 +64,12 @@ export async function GET(req: NextRequest) {
 
         const wonThisQuarter = await Opportunity.aggregate([
           {
-            $match: {
-              userId,
+            $match: t.where({
               stage: 'Closed Won',
               closeDate: {
                 $gte: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1),
               },
-            },
+            }),
           },
           { $group: { _id: null, total: { $sum: '$amount' } } },
         ]);
@@ -99,7 +91,7 @@ export async function GET(req: NextRequest) {
 
       case 'pipeline-by-stage': {
         const pipeline = await Opportunity.aggregate([
-          { $match: { userId } },
+          { $match: t.where() },
           {
             $group: {
               _id: '$stage',
@@ -114,7 +106,7 @@ export async function GET(req: NextRequest) {
 
       case 'lead-funnel': {
         const funnel = await Lead.aggregate([
-          { $match: { userId } },
+          { $match: t.where() },
           { $group: { _id: '$status', count: { $sum: 1 } } },
         ]);
         report = { type: 'lead-funnel', stages: funnel };
@@ -124,11 +116,10 @@ export async function GET(req: NextRequest) {
       case 'sales-forecast': {
         const now = new Date();
         const next90 = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-        const opps = await Opportunity.find({
-          userId,
+        const opps = await Opportunity.find(t.where({
           closeDate: { $gte: now, $lte: next90 },
           stage: { $nin: ['Closed Won', 'Closed Lost'] },
-        });
+        }));
 
         const forecast = opps.reduce(
           (acc: any, o: any) => {
@@ -147,25 +138,24 @@ export async function GET(req: NextRequest) {
 
       case 'case-summary': {
         const byPriority = await Case.aggregate([
-          { $match: { userId, status: { $nin: ['Resolved', 'Closed'] } } },
+          { $match: t.where({ status: { $nin: ['Resolved', 'Closed'] } }) },
           { $group: { _id: '$priority', count: { $sum: 1 } } },
         ]);
         const byStatus = await Case.aggregate([
-          { $match: { userId } },
+          { $match: t.where() },
           { $group: { _id: '$status', count: { $sum: 1 } } },
         ]);
-        const slaBreaches = await Case.countDocuments({
-          userId,
+        const slaBreaches = await Case.countDocuments(t.where({
           slaDueAt: { $lt: new Date() },
           status: { $nin: ['Resolved', 'Closed'] },
-        });
+        }));
         report = { type: 'case-summary', byPriority, byStatus, slaBreaches };
         break;
       }
 
       case 'activity-summary': {
         const byType = await Activity.aggregate([
-          { $match: { userId } },
+          { $match: t.where() },
           { $group: { _id: '$type', count: { $sum: 1 } } },
         ]);
         report = { type: 'activity-summary', byType };
@@ -178,7 +168,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(report);
   } catch (error) {
-    console.error('Error generating sales-service report:', error);
-    return NextResponse.json({ type: 'error', message: 'Report generation failed' }, { status: 200 });
+    return apiError(error, 'Error generating sales-service report:');
   }
 }

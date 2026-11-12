@@ -110,18 +110,15 @@ export default function LeavePage() {
       ...form,
       days: Number(form.days) || 0,
     };
-    if (editing) {
-      await fetch('/api/hrm/leave', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: editing._id, ...payload }),
-      });
-    } else {
-      await fetch('/api/hrm/leave', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+    const res = await fetch('/api/hrm/leave', {
+      method: editing ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editing ? { _id: editing._id, ...payload } : payload),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Could not save');
+      return;
     }
     setOpen(false);
     setForm(emptyForm());
@@ -130,17 +127,25 @@ export default function LeavePage() {
   };
 
   const updateStatus = async (id: string, status: string) => {
-    await fetch('/api/hrm/leave', {
+    const res = await fetch('/api/hrm/leave', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, status }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Could not save');
+    }
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this leave request?')) return;
-    await fetch(`/api/hrm/leave?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/hrm/leave?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Could not delete');
+    }
     load();
   };
 

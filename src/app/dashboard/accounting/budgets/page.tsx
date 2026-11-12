@@ -12,6 +12,7 @@ import {
   SecondaryButton,
   Badge,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type BudgetItem = { category: string; budgetAmount: number; actualAmount: number; forecast?: number };
@@ -66,7 +67,7 @@ export default function BudgetsPage() {
 
   const save = async () => {
     if (!form.budgetName || !form.fiscalYear) return;
-    await fetch('/api/accounting/budgets', {
+    const res = await fetch('/api/accounting/budgets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -78,6 +79,7 @@ export default function BudgetsPage() {
         })),
       }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({
       fiscalYear: String(new Date().getFullYear()),
@@ -88,7 +90,8 @@ export default function BudgetsPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this budget?')) return;
-    await fetch(`/api/accounting/budgets?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/accounting/budgets?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

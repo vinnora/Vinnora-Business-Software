@@ -45,11 +45,12 @@ export default function KnowledgePage() {
 
   const save = async () => {
     if (!form.title || !form.body) return;
-    await fetch('/api/sales-service/knowledge', {
+    const res = await fetch('/api/sales-service/knowledge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
+    if (!res.ok) return alert((await res.json().catch(() => ({}))).error || 'Could not save');
     setOpen(false);
     setForm({ status: 'Draft', visibility: 'Internal' });
     load();
@@ -57,7 +58,8 @@ export default function KnowledgePage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this help article?')) return;
-    await fetch(`/api/sales-service/knowledge?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/sales-service/knowledge?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) return alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     setSelected(null);
     load();
   };

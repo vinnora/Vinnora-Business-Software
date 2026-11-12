@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// PRESERVED — not wired up. Auth is intentionally bypassed during development
-// via src/proxy.ts. When ready to enforce auth, move the body of this function
-// into `export function proxy(...)` in src/proxy.ts (and keep the matcher config).
+// PRESERVED — not wired up. Sign-in is now enforced by src/proxy.ts (set
+// VINNORA_DEV_AUTH_BYPASS=true in development to skip it). Kept for reference only.
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 

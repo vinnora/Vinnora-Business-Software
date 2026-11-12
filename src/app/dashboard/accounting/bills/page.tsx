@@ -10,6 +10,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type LineItem = { description: string; quantity: number; unitPrice: number; amount: number };
@@ -69,7 +70,7 @@ export default function BillsPage() {
 
   const save = async () => {
     if (!form.vendorName) return;
-    await fetch('/api/accounting/bills', {
+    const res = await fetch('/api/accounting/bills', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -78,6 +79,7 @@ export default function BillsPage() {
         tax: Number(form.tax) || 0,
       }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({
       billDate: new Date().toISOString().slice(0, 10),
@@ -89,17 +91,19 @@ export default function BillsPage() {
   };
 
   const updateStatus = async (id: string, status: string) => {
-    await fetch('/api/accounting/bills', {
+    const res = await fetch('/api/accounting/bills', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, status }),
     });
+    await apiOk(res);
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this bill?')) return;
-    await fetch(`/api/accounting/bills?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/accounting/bills?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

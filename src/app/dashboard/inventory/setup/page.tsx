@@ -11,6 +11,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   Badge,
+  apiOk,
 } from '../_components/ui';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
 import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
@@ -45,6 +46,12 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
 
 export default function InventorySetupPage() {
   const [tab, setTab] = useState<Tab>('picklists');
+  // Open the tab named in ?tab= (e.g. when coming back from workspace-wide Settings).
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from the URL after hydration
+    if (t && TABS.some((x) => x.id === t)) setTab(t as Tab);
+  }, []);
 
   return (
     <>
@@ -120,7 +127,7 @@ function PicklistsTab({ keyOverride, title }: { keyOverride?: string; title?: st
 
   const add = async () => {
     if (!newValue) return;
-    await fetch('/api/inventory/settings', {
+    const res = await fetch('/api/inventory/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -130,21 +137,24 @@ function PicklistsTab({ keyOverride, title }: { keyOverride?: string; title?: st
         order: values.length,
       }),
     });
+    if (!(await apiOk(res))) return;
     setNewValue('');
     load();
   };
 
   const remove = async (id: string) => {
-    await fetch(`/api/inventory/settings?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/settings?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 
   const toggle = async (v: any) => {
-    await fetch('/api/inventory/settings', {
+    const res = await fetch('/api/inventory/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: v._id, active: !v.active }),
     });
+    if (!(await apiOk(res))) return;
     load();
   };
 
@@ -254,11 +264,12 @@ function ReorderRulesTab() {
   const save = async () => {
     if (!form.name) return;
     const supplier = suppliers.find((s) => s._id === form.preferredSupplierId);
-    await fetch('/api/inventory/reorder-rules', {
+    const res = await fetch('/api/inventory/reorder-rules', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, preferredSupplierName: supplier?.name }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm(empty());
     load();
@@ -271,22 +282,24 @@ function ReorderRulesTab() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'run', ruleId: id }),
     }).then((r) => r.json());
-    alert(`${res.ordersCreated || 0} purchase orders created.`);
+    alert(res.error || `${res.ordersCreated || 0} purchase orders created.`);
     load();
   };
 
   const toggle = async (r: any) => {
-    await fetch('/api/inventory/reorder-rules', {
+    const res = await fetch('/api/inventory/reorder-rules', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: r._id, active: !r.active }),
     });
+    if (!(await apiOk(res))) return;
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete?')) return;
-    await fetch(`/api/inventory/reorder-rules?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/reorder-rules?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 
@@ -484,11 +497,12 @@ function WorkflowsTab() {
 
   const save = async () => {
     if (!form.name) return;
-    await fetch('/api/inventory/workflows', {
+    const res = await fetch('/api/inventory/workflows', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({
       objectType: 'Item',
@@ -502,17 +516,19 @@ function WorkflowsTab() {
   };
 
   const toggle = async (r: any) => {
-    await fetch('/api/inventory/workflows', {
+    const res = await fetch('/api/inventory/workflows', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: r._id, active: !r.active }),
     });
+    if (!(await apiOk(res))) return;
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete?')) return;
-    await fetch(`/api/inventory/workflows?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/workflows?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

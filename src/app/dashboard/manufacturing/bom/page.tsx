@@ -89,18 +89,24 @@ export default function BOMPage() {
     const totalCost = bomItems.reduce((s: number, it: any) => s + it.quantity * it.costPerUnit, 0);
     const payload = { ...form, items: bomItems, totalCost };
 
+    let res: Response;
     if (editing) {
-      await fetch('/api/manufacturing/bom', {
+      res = await fetch('/api/manufacturing/bom', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editing._id, ...payload }),
       });
     } else {
-      await fetch('/api/manufacturing/bom', {
+      res = await fetch('/api/manufacturing/bom', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+    }
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not save');
+      return;
     }
     setOpen(false);
     setForm(emptyForm());
@@ -110,7 +116,12 @@ export default function BOMPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this BOM?')) return;
-    await fetch(`/api/manufacturing/bom?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/manufacturing/bom?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not delete');
+      return;
+    }
     load();
   };
 

@@ -58,16 +58,25 @@ async function resolveSandbox(orgId: string, userId: string, orgRole: OrgRole): 
 }
 
 /**
+ * Signed-out access as a dev "owner". Off unless VINNORA_DEV_AUTH_BYPASS=true is set,
+ * and never in production.
+ */
+export function devAuthBypassEnabled(): boolean {
+  return process.env.VINNORA_DEV_AUTH_BYPASS === 'true' && process.env.NODE_ENV !== 'production';
+}
+
+/**
  * Get the authenticated user's context for a given app.
  * Always re-fetches from DB to avoid stale JWT data.
- * Falls back to dev context when no session (dev mode).
+ * Throws UnauthorizedError when signed out (unless the dev bypass is enabled).
  */
 export async function getAuthContext(app?: AppKey): Promise<AuthContext> {
   await dbConnect();
   const session = await getServerSession(authOptions);
 
-  // Dev fallback — allow unauthenticated access in development
   if (!session?.user?.id) {
+    if (!devAuthBypassEnabled()) throw new UnauthorizedError();
+    // Dev bypass — unauthenticated access as an owner of a placeholder workspace
     return {
       userId: 'dev-user-id',
       orgId: 'dev-org-id',
@@ -159,6 +168,14 @@ export function isOwner(ctx: AuthContext): boolean {
 }
 
 /** Custom error classes */
+export class UnauthorizedError extends Error {
+  status = 401;
+  constructor(message = 'Please sign in') {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
 export class ForbiddenError extends Error {
   status = 403;
   constructor(message = 'Insufficient permissions') {
@@ -177,6 +194,9 @@ export class ModuleAccessError extends Error {
 
 /** Helper to return proper error responses from auth errors */
 export function handleAuthError(error: unknown): NextResponse {
+  if (error instanceof UnauthorizedError) {
+    return NextResponse.json({ error: error.message }, { status: 401 });
+  }
   if (error instanceof ForbiddenError) {
     return NextResponse.json({ error: error.message }, { status: 403 });
   }

@@ -12,6 +12,7 @@ import {
   SecondaryButton,
   Badge,
   Tile,
+  apiOk,
 } from '../_components/ui';
 
 type Transfer = {
@@ -110,7 +111,7 @@ export default function StockTransfersPage() {
     if (!form.fromWarehouseId || !form.toWarehouseId) return;
     const from = warehouses.find((w) => w._id === form.fromWarehouseId);
     const to = warehouses.find((w) => w._id === form.toWarehouseId);
-    await fetch('/api/inventory/stock-transfers', {
+    const res = await fetch('/api/inventory/stock-transfers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -119,6 +120,7 @@ export default function StockTransfersPage() {
         toWarehouseName: to?.name,
       }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm(empty());
     load();
@@ -126,27 +128,30 @@ export default function StockTransfersPage() {
 
   const ship = async (id: string) => {
     if (!confirm('Mark as shipped? This will deduct stock from the source warehouse.')) return;
-    await fetch('/api/inventory/stock-transfers', {
+    const res = await fetch('/api/inventory/stock-transfers', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, action: 'ship' }),
     });
+    if (!(await apiOk(res))) return;
     load();
   };
 
   const receive = async (id: string) => {
     if (!confirm('Mark as received? This will add stock to the destination warehouse.')) return;
-    await fetch('/api/inventory/stock-transfers', {
+    const res = await fetch('/api/inventory/stock-transfers', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, action: 'receive' }),
     });
+    if (!(await apiOk(res))) return;
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this transfer?')) return;
-    await fetch(`/api/inventory/stock-transfers?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/stock-transfers?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

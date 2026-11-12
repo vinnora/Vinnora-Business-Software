@@ -111,18 +111,15 @@ export default function EmployeesPage() {
       ...form,
       salary: Number(form.salary) || 0,
     };
-    if (editing) {
-      await fetch('/api/hrm/employees', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: editing._id, ...payload }),
-      });
-    } else {
-      await fetch('/api/hrm/employees', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+    const res = await fetch('/api/hrm/employees', {
+      method: editing ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editing ? { _id: editing._id, ...payload } : payload),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Could not save');
+      return;
     }
     setOpen(false);
     setForm(emptyForm());
@@ -132,7 +129,11 @@ export default function EmployeesPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this employee?')) return;
-    await fetch(`/api/hrm/employees?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/hrm/employees?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Could not delete');
+    }
     load();
   };
 

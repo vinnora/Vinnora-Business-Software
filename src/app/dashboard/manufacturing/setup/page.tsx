@@ -23,6 +23,12 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
 
 export default function ManufacturingSetupPage() {
   const [tab, setTab] = useState<Tab>('general');
+  // Open the tab named in ?tab= (e.g. when coming back from workspace-wide Settings).
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from the URL after hydration
+    if (t && TABS.some((x) => x.id === t)) setTab(t as Tab);
+  }, []);
 
   return (
     <>
@@ -185,18 +191,24 @@ function WorkflowsTab() {
 
   const save = async () => {
     if (!form.name) return;
+    let res: Response;
     if (editing) {
-      await fetch('/api/manufacturing/workflows', {
+      res = await fetch('/api/manufacturing/workflows', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editing._id, ...form }),
       });
     } else {
-      await fetch('/api/manufacturing/workflows', {
+      res = await fetch('/api/manufacturing/workflows', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
+    }
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not save');
+      return;
     }
     setOpen(false);
     setEditing(null);
@@ -204,17 +216,27 @@ function WorkflowsTab() {
   };
 
   const toggle = async (r: any) => {
-    await fetch('/api/manufacturing/workflows', {
+    const res = await fetch('/api/manufacturing/workflows', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: r._id, active: !r.active }),
     });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not save');
+      return;
+    }
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this workflow?')) return;
-    await fetch(`/api/manufacturing/workflows?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/manufacturing/workflows?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not delete');
+      return;
+    }
     load();
   };
 

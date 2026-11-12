@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { UserAvatar } from '@/components/UserAvatar';
 import { CustomObjectNav } from '@/components/platform/CustomObjectNav';
 import type { ReactNode } from 'react';
 import { HrmIcon } from '@/components/ModuleIcon';
@@ -88,7 +89,7 @@ export default function HrmLayout({ children }: { children: ReactNode }) {
             <button className="p-2 hover:bg-[#FAF1E1] rounded">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4A6 6 0 0119 11V8a7 7 0 10-14 0v3a6 6 0 01-.6 4.6L3 17h5m7 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
             </button>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#8B6F47] to-[#2C2620] flex items-center justify-center text-white text-sm font-semibold">U</div>
+            <UserAvatar className="bg-gradient-to-br from-[#8B6F47] to-[#2C2620]" />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">{children}</main>

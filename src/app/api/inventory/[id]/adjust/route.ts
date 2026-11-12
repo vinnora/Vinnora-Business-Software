@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import InventoryItem from '@/models/InventoryItem';
 import StockAdjustment from '@/models/StockAdjustment';
+import { getTenant, recordId, apiError, NotFoundError } from '@/lib/tenant';
+import { objectIdWhere } from '../../_lib/object-id-scope';
 
 type RouteParams = Promise<{ id: string }>;
 
 export async function POST(req: NextRequest, { params }: { params: RouteParams }) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as any)?.id || 'dev-user-id';
-    const { id } = await params;
+    await dbConnect();
+    const t = await getTenant('inventory');
+    t.requireWrite();
+    const id = recordId((await params).id);
 
     const { adjustmentType, quantityChanged, reason, referenceNumber, notes, location } = await req.json();
 
@@ -22,93 +23,62 @@ export async function POST(req: NextRequest, { params }: { params: RouteParams }
       );
     }
 
-    try {
-      await dbConnect();
+    // Get the current item
+    const item = await InventoryItem.findOne(objectIdWhere(t, { _id: id }));
+    if (!item) throw new NotFoundError('Item not found');
 
-      // Get the current item
-      const item = await InventoryItem.findOne({ _id: id, userId });
-      if (!item) {
-        return NextResponse.json({ error: 'Item not found' }, { status: 404 });
-      }
+    const quantityBefore = item.quantity;
+    const quantityAfter = item.quantity + quantityChanged;
 
-      const quantityBefore = item.quantity;
-      const quantityAfter = item.quantity + quantityChanged;
-
-      if (quantityAfter < 0) {
-        return NextResponse.json(
-          { error: 'Insufficient stock for this adjustment' },
-          { status: 400 }
-        );
-      }
-
-      // Update the item quantity
-      item.quantity = quantityAfter;
-      item.updatedAt = new Date();
-      await item.save();
-
-      // Create stock adjustment record
-      const adjustment = await StockAdjustment.create({
-        userId,
-        itemId: id,
-        itemName: item.name,
-        adjustmentType,
-        quantityChanged,
-        quantityBefore,
-        quantityAfter,
-        reason,
-        referenceNumber,
-        notes,
-        location: location || item.location,
-        createdBy: session?.user?.email || 'System',
-      });
-
+    if (quantityAfter < 0) {
       return NextResponse.json(
-        { item, adjustment },
-        { status: 201 }
-      );
-    } catch (dbError) {
-      console.error('Database error:', dbError);
-      // Return mock success for development
-      return NextResponse.json(
-        {
-          item: { _id: id, quantity: parseInt(String(quantityChanged)) },
-          adjustment: {
-            _id: 'mock-' + Date.now(),
-            adjustmentType,
-            quantityChanged,
-            reason,
-          },
-        },
-        { status: 201 }
+        { error: 'Insufficient stock for this adjustment' },
+        { status: 400 }
       );
     }
+
+    // Update the item quantity
+    item.quantity = quantityAfter;
+    item.updatedAt = new Date();
+    await item.save();
+
+    // Create stock adjustment record (no orgId field on this model: owned by the user id)
+    const adjustment = await StockAdjustment.create({
+      ...t.stamp('id'),
+      itemId: id,
+      itemName: item.name,
+      adjustmentType,
+      quantityChanged,
+      quantityBefore,
+      quantityAfter,
+      reason,
+      referenceNumber,
+      notes,
+      location: location || item.location,
+      createdBy: t.email || 'System',
+    });
+
+    return NextResponse.json(
+      { item, adjustment },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error('POST adjust error:', error);
-    return NextResponse.json({ error: 'Failed to adjust stock' }, { status: 500 });
+    return apiError(error, 'Error adjusting stock:');
   }
 }
 
-export async function GET(req: NextRequest, { params }: { params: RouteParams }) {
+export async function GET(_req: NextRequest, { params }: { params: RouteParams }) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as any)?.id || 'dev-user-id';
-    const { id } = await params;
+    await dbConnect();
+    const t = await getTenant('inventory');
+    const id = recordId((await params).id);
 
-    try {
-      await dbConnect();
+    const adjustments = await StockAdjustment.find(objectIdWhere(t, { itemId: id }))
+      .sort({ createdAt: -1 })
+      .limit(50);
 
-      const adjustments = await StockAdjustment.find({ userId, itemId: id })
-        .sort({ createdAt: -1 })
-        .limit(50);
-
-      return NextResponse.json(adjustments);
-    } catch (dbError) {
-      console.error('Database error:', dbError);
-      // Return empty array for development
-      return NextResponse.json([]);
-    }
+    return NextResponse.json(adjustments);
   } catch (error) {
-    console.error('GET adjust error:', error);
-    return NextResponse.json([]);
+    return apiError(error, 'Error fetching stock adjustments:');
   }
 }

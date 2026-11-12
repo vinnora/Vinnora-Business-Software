@@ -13,6 +13,7 @@ import {
   Badge,
   Tile,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type Variant = {
@@ -163,19 +164,18 @@ export default function ItemsPage() {
       reorderQuantity: Number(form.reorderQuantity) || 0,
       imageUrls: (form.imageUrls || []).filter(Boolean),
     };
-    if (editing) {
-      await fetch('/api/inventory/items', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: editing._id, ...payload }),
-      });
-    } else {
-      await fetch('/api/inventory/items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-    }
+    const res = editing
+      ? await fetch('/api/inventory/items', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _id: editing._id, ...payload }),
+        })
+      : await fetch('/api/inventory/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm(emptyForm());
     setEditing(null);
@@ -184,7 +184,8 @@ export default function ItemsPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this item?')) return;
-    await fetch(`/api/inventory/items?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/items?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

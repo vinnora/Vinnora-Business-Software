@@ -33,13 +33,16 @@ export default function SmsPage() {
     if (!form.name || !form.body) return;
     const method = editing ? 'PATCH' : 'POST';
     const payload = editing ? { _id: editing._id, ...form } : form;
-    await fetch('/api/marketing/sms', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch('/api/marketing/sms', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error || 'Could not save'); return; }
     setOpen(false); setEditing(null); setForm({ name: '', body: '', senderId: '', status: 'Draft' }); load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this SMS?')) return;
-    await fetch(`/api/marketing/sms?id=${id}`, { method: 'DELETE' }); load();
+    const res = await fetch(`/api/marketing/sms?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
+    load();
   };
 
   const charCount = (form.body || '').length;

@@ -1,57 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import HrmDepartment from '@/models/HrmDepartment';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
-    const items = await HrmDepartment.find({ userId }).sort({ name: 1 }).limit(200);
+    const t = await getTenant('hrm');
+    const items = await HrmDepartment.find(t.where()).sort({ name: 1 }).limit(200);
     return NextResponse.json(items);
   } catch (error) {
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching departments:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('hrm');
+    t.requireWrite();
     const body = await req.json();
     if (!body.name) return NextResponse.json({ error: 'name required' }, { status: 400 });
-    const item = await HrmDepartment.create({ ...body, userId });
+    const item = await HrmDepartment.create({ ...sanitize(body), ...t.stamp() });
     return NextResponse.json(item, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error creating department:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('hrm');
+    t.requireWrite();
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const item = await HrmDepartment.findByIdAndUpdate(_id, updates, { new: true });
+    if (!body._id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const item = await HrmDepartment.findOneAndUpdate(t.where({ _id: recordId(body._id) }), sanitize(body), { new: true, runValidators: true });
+    if (!item) throw new NotFoundError('Department not found');
     return NextResponse.json(item);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating department:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('hrm');
+    t.requireWrite();
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await HrmDepartment.findByIdAndDelete(id);
+    const rawId = searchParams.get('id');
+    if (!rawId) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    const res = await HrmDepartment.deleteOne(t.where({ _id: recordId(rawId) }));
+    if (!res.deletedCount) throw new NotFoundError('Department not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting department:');
   }
 }

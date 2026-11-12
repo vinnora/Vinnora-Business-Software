@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import ReorderRule from '@/models/ReorderRule';
 import Item from '@/models/Item';
 import PurchaseOrder from '@/models/PurchaseOrder';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 function genPONumber() {
   const year = new Date().getFullYear();
@@ -15,28 +14,27 @@ function genPONumber() {
 export async function GET(_req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
-    const items = await ReorderRule.find({ userId }).sort({ createdAt: -1 });
+    const t = await getTenant('inventory');
+    const items = await ReorderRule.find(t.where()).sort({ createdAt: -1 });
     return NextResponse.json(items);
-  } catch {
-    return NextResponse.json([], { status: 200 });
+  } catch (error) {
+    return apiError(error, 'Error fetching reorder rules:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('inventory');
+    t.requireWrite();
     const body = await req.json();
 
     if (body.action === 'run' && body.ruleId) {
-      const rule = await ReorderRule.findById(body.ruleId);
-      if (!rule) return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
+      const rule = await ReorderRule.findOne(t.where({ _id: recordId(body.ruleId) }));
+      if (!rule) throw new NotFoundError('Rule not found');
 
       // Find items needing reorder
-      const filter: any = { userId };
+      const filter: any = {};
       if (rule.appliesTo === 'category' && rule.categoryFilter) {
         filter.category = rule.categoryFilter;
       } else if (rule.appliesTo === 'item' && rule.itemIds.length > 0) {
@@ -44,7 +42,7 @@ export async function POST(req: NextRequest) {
       }
       filter.$expr = { $lte: ['$totalStock', rule.reorderPoint] };
 
-      const lowItems = await Item.find(filter);
+      const lowItems = await Item.find(t.where(filter));
       const created = [];
 
       for (const item of lowItems) {
@@ -56,7 +54,7 @@ export async function POST(req: NextRequest) {
         const lineSub = quantity * unitCost;
         const taxAmount = (lineSub * (item.taxRate || 0)) / 100;
         const po = await PurchaseOrder.create({
-          userId,
+          ...t.stamp(),
           poNumber: genPONumber(),
           supplierId: supplier.supplierId,
           supplierName: supplier.supplierName,
@@ -95,35 +93,44 @@ export async function POST(req: NextRequest) {
     }
 
     if (!body.name) return NextResponse.json({ error: 'name required' }, { status: 400 });
-    const r = await ReorderRule.create({ ...body, userId });
+    const r = await ReorderRule.create({ ...sanitize(body), ...t.stamp() });
     return NextResponse.json(r, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error saving reorder rule:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('inventory');
+    t.requireWrite();
     const body = await req.json();
     const { _id, ...updates } = body;
     if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const r = await ReorderRule.findByIdAndUpdate(_id, updates, { new: true });
+    const r = await ReorderRule.findOneAndUpdate(t.where({ _id: recordId(_id) }), sanitize(updates), {
+      new: true,
+      runValidators: true,
+    });
+    if (!r) throw new NotFoundError('Rule not found');
     return NextResponse.json(r);
-  } catch {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error updating reorder rule:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('inventory');
+    t.requireWrite();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await ReorderRule.findByIdAndDelete(id);
+    const res = await ReorderRule.deleteOne(t.where({ _id: recordId(id) }));
+    if (!res.deletedCount) throw new NotFoundError('Rule not found');
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error deleting reorder rule:');
   }
 }

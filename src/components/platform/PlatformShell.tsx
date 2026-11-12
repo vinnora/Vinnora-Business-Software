@@ -4,14 +4,24 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { EnvironmentSwitcher } from './EnvironmentSwitcher';
+import { UserAvatar } from '../UserAvatar';
 
 const LINKS = [
-  { href: '/dashboard/reports', label: 'Reports & Dashboards' },
+  { href: '/dashboard/reports', label: 'Reports' },
   { href: '/dashboard/setup', label: 'Settings' },
 ];
 
-/** Header used by organisation-wide pages (Setup, Reports & Dashboards). */
-export function PlatformShell({ title, children }: { title: string; children: ReactNode }) {
+/** Header used by organisation-wide pages (Setup, Reports). */
+export function PlatformShell({
+  title,
+  back,
+  children,
+}: {
+  title: string;
+  /** Optional link back to where the user came from (e.g. an app's Settings). */
+  back?: { href: string; label: string };
+  children: ReactNode;
+}) {
   const pathname = usePathname();
   return (
     <div className="min-h-screen bg-gray-50">
@@ -32,7 +42,7 @@ export function PlatformShell({ title, children }: { title: string; children: Re
                 key={l.href}
                 href={l.href}
                 className={`px-3 py-1.5 text-sm rounded-lg transition ${
-                  pathname.startsWith(l.href) || (l.href === '/dashboard/reports' && pathname.startsWith('/dashboard/dashboards'))
+                  pathname.startsWith(l.href)
                     ? 'bg-white/20'
                     : 'hover:bg-white/10'
                 }`}
@@ -44,10 +54,18 @@ export function PlatformShell({ title, children }: { title: string; children: Re
             <Link href="/dashboard" className="px-3 py-1.5 text-sm text-white/80 hover:text-white">
               ← All apps
             </Link>
+            <UserAvatar className="bg-white/20 hover:bg-white/30" />
           </nav>
         </div>
       </header>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">{children}</main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {back && (
+          <Link href={back.href} className="inline-flex items-center gap-1 text-sm text-[#01497C] hover:underline mb-3">
+            ← {back.label}
+          </Link>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

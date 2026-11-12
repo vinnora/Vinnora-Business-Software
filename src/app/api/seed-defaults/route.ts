@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import WorkflowRule from '@/models/WorkflowRule';
 import InventoryWorkflowRule from '@/models/InventoryWorkflowRule';
@@ -10,6 +8,7 @@ import MktAutomation from '@/models/MktAutomation';
 import MfgWorkflowRule from '@/models/MfgWorkflowRule';
 import AppIntegration from '@/models/AppIntegration';
 import AppConnection from '@/models/AppConnection';
+import { getTenant, apiError } from '@/lib/tenant';
 
 const SALES_DEFAULTS = [
   { name: 'Auto-assign new enquiries', description: 'Assigns a default owner to every new enquiry', objectType: 'Lead', triggerEvent: 'created', conditions: [], conditionLogic: 'AND', actions: [{ type: 'assignOwner', params: { ownerName: 'Sales Team' } }] },
@@ -91,73 +90,53 @@ const DEFAULT_CONNECTIONS = [
   { name: 'Payroll → Accounting Entry', description: 'Create salary expense in accounting when payroll is processed', sourceApp: 'hrm', sourceObject: 'PayrollRecord', sourceEvent: 'fieldChanged', targetApp: 'accounting', targetAction: 'createTransaction', fieldMapping: [{ sourceField: 'netPay', targetField: 'amount' }, { sourceField: 'employeeName', targetField: 'description' }, { sourceField: 'period', targetField: 'reference' }], conditions: [{ field: 'status', operator: 'equals', value: 'Paid' }] },
 ];
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    // Workspace admins only; defaults are created once per workspace.
+    const t = await getTenant();
+    t.requireAdmin();
+    const owner = t.stamp();
+    const isNew = async (model: { countDocuments(f: object): Promise<number> }) =>
+      (await model.countDocuments(t.where({ isDefault: true }))) === 0;
 
     const results: Record<string, number> = {};
 
-    // Seed Sales workflows
-    const existingSales = await WorkflowRule.countDocuments({ userId, isDefault: true });
-    if (existingSales === 0) {
-      await WorkflowRule.insertMany(SALES_DEFAULTS.map(w => ({ ...w, userId, active: true, isDefault: true })));
+    if (await isNew(WorkflowRule)) {
+      await WorkflowRule.insertMany(SALES_DEFAULTS.map(w => ({ ...w, ...owner, active: true, isDefault: true })));
       results.salesWorkflows = SALES_DEFAULTS.length;
     }
-
-    // Seed Inventory workflows
-    const existingInv = await InventoryWorkflowRule.countDocuments({ userId, isDefault: true });
-    if (existingInv === 0) {
-      await InventoryWorkflowRule.insertMany(INVENTORY_DEFAULTS.map(w => ({ ...w, userId, active: true, isDefault: true })));
+    if (await isNew(InventoryWorkflowRule)) {
+      await InventoryWorkflowRule.insertMany(INVENTORY_DEFAULTS.map(w => ({ ...w, ...owner, active: true, isDefault: true })));
       results.inventoryWorkflows = INVENTORY_DEFAULTS.length;
     }
-
-    // Seed Accounting workflows
-    const existingAcct = await AccountingWorkflowRule.countDocuments({ userId, isDefault: true });
-    if (existingAcct === 0) {
-      await AccountingWorkflowRule.insertMany(ACCOUNTING_DEFAULTS.map(w => ({ ...w, userId, active: true, isDefault: true })));
+    if (await isNew(AccountingWorkflowRule)) {
+      await AccountingWorkflowRule.insertMany(ACCOUNTING_DEFAULTS.map(w => ({ ...w, ...owner, active: true, isDefault: true })));
       results.accountingWorkflows = ACCOUNTING_DEFAULTS.length;
     }
-
-    // Seed Marketing automations
-    const existingMkt = await MktAutomation.countDocuments({ userId, isDefault: true });
-    if (existingMkt === 0) {
-      await MktAutomation.insertMany(MARKETING_DEFAULTS.map(a => ({ ...a, userId, active: true, isDefault: true })));
+    if (await isNew(MktAutomation)) {
+      await MktAutomation.insertMany(MARKETING_DEFAULTS.map(a => ({ ...a, ...owner, active: true, isDefault: true })));
       results.marketingAutomations = MARKETING_DEFAULTS.length;
     }
-
-    // Seed HRM workflows
-    const existingHrm = await HrmWorkflowRule.countDocuments({ userId, isDefault: true });
-    if (existingHrm === 0) {
-      await HrmWorkflowRule.insertMany(HRM_DEFAULTS.map(w => ({ ...w, userId, active: true, isDefault: true })));
+    if (await isNew(HrmWorkflowRule)) {
+      await HrmWorkflowRule.insertMany(HRM_DEFAULTS.map(w => ({ ...w, ...owner, active: true, isDefault: true })));
       results.hrmWorkflows = HRM_DEFAULTS.length;
     }
-
-    // Seed Manufacturing workflows
-    const existingMfg = await MfgWorkflowRule.countDocuments({ userId, isDefault: true });
-    if (existingMfg === 0) {
-      await MfgWorkflowRule.insertMany(MFG_DEFAULTS.map(w => ({ ...w, userId, active: true, isDefault: true })));
+    if (await isNew(MfgWorkflowRule)) {
+      await MfgWorkflowRule.insertMany(MFG_DEFAULTS.map(w => ({ ...w, ...owner, active: true, isDefault: true })));
       results.manufacturingWorkflows = MFG_DEFAULTS.length;
     }
-
-    // Seed Integrations
-    const existingInt = await AppIntegration.countDocuments({ userId, isDefault: true });
-    if (existingInt === 0) {
-      await AppIntegration.insertMany(DEFAULT_INTEGRATIONS.map(i => ({ ...i, userId, active: false, isDefault: true })));
+    if (await isNew(AppIntegration)) {
+      await AppIntegration.insertMany(DEFAULT_INTEGRATIONS.map(i => ({ ...i, ...owner, active: false, isDefault: true })));
       results.integrations = DEFAULT_INTEGRATIONS.length;
     }
-
-    // Seed App Connections
-    const existingConn = await AppConnection.countDocuments({ userId, isDefault: true });
-    if (existingConn === 0) {
-      await AppConnection.insertMany(DEFAULT_CONNECTIONS.map(c => ({ ...c, userId, active: true, isDefault: true })));
+    if (await isNew(AppConnection)) {
+      await AppConnection.insertMany(DEFAULT_CONNECTIONS.map(c => ({ ...c, ...owner, active: true, isDefault: true })));
       results.connections = DEFAULT_CONNECTIONS.length;
     }
 
     return NextResponse.json({ success: true, seeded: results });
-  } catch (error: any) {
-    console.error('Seed defaults error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to seed defaults' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Seed defaults error:');
   }
 }

@@ -39,7 +39,7 @@ export function ReportPage({ id }: { id: string }) {
     }
   };
   const remove = async () => {
-    if (!window.confirm('Delete this report? It is also removed from dashboards.')) return;
+    if (!window.confirm('Delete this report? It is also removed from app Home pages.')) return;
     try {
       await api(`/api/platform/reports/${id}`, { method: 'DELETE' });
       router.push('/dashboard/reports');

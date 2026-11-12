@@ -3,6 +3,9 @@ import Activity from '@/models/Activity';
 import Case from '@/models/Case';
 import WorkOrder from '@/models/WorkOrder';
 
+/** Fields a workflow rule may never set. */
+const PROTECTED_FIELDS = new Set(['_id', 'orgId', 'userId', 'createdAt', 'updatedAt', '__v']);
+
 /**
  * Lightweight rule engine. Runs after CRUD on tracked objects.
  * Designed to be best-effort: failures never block the user request.
@@ -76,7 +79,8 @@ async function executeAction(
       break;
     }
     case 'updateField': {
-      if (!params.field) break;
+      // Ownership/system fields are never changed by a rule.
+      if (!params.field || PROTECTED_FIELDS.has(String(params.field).split('.')[0])) break;
       record[params.field] = interpolate(String(params.value ?? ''), record) || params.value;
       await record.save();
       break;

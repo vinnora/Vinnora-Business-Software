@@ -13,6 +13,7 @@ import {
   Badge,
   Tile,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type Warehouse = {
@@ -71,19 +72,18 @@ export default function WarehousesPage() {
 
   const save = async () => {
     if (!form.name) return;
-    if (editing) {
-      await fetch('/api/inventory/warehouses', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: editing._id, ...form }),
-      });
-    } else {
-      await fetch('/api/inventory/warehouses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-    }
+    const res = editing
+      ? await fetch('/api/inventory/warehouses', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _id: editing._id, ...form }),
+        })
+      : await fetch('/api/inventory/warehouses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setEditing(null);
     load();
@@ -91,7 +91,8 @@ export default function WarehousesPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this warehouse?')) return;
-    await fetch(`/api/inventory/warehouses?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/warehouses?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

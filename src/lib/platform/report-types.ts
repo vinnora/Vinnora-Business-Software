@@ -94,15 +94,14 @@ export interface DashboardComponentDTO {
   aggregateIndex?: number;
 }
 
-export interface DashboardDTO {
-  _id?: string;
-  name: string;
-  apiName?: string;
-  description?: string;
-  folder: 'public' | 'private';
+/** Per report: its definition and result as run for the viewer, or why it couldn't run. */
+export type HomeDataMap = Record<string, { report?: ReportDefinition; result?: ReportResult; error?: string }>;
+
+/** An app's Home dashboard: report components shown under the app's default metrics. */
+export interface HomeDashboardDTO {
   components: DashboardComponentDTO[];
-  ownerId?: string;
-  ownerName?: string;
-  canEdit?: boolean;
+  /** Viewer may add/remove components (needs "Manage Public Reports"). */
+  canEdit: boolean;
+  data: HomeDataMap;
   updatedAt?: string;
 }

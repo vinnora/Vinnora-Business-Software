@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function SignIn() {
@@ -10,7 +9,6 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +19,11 @@ export default function SignIn() {
       setError('Invalid credentials');
       setLoading(false);
     } else {
-      router.push('/dashboard');
+      // Return to the app the user picked (only same-site paths), else the All Apps dashboard.
+      const target = new URLSearchParams(window.location.search).get('callbackUrl') || '';
+      const safe = target.startsWith('/') && !target.startsWith('//') && !target.startsWith('/\\') ? target : '/dashboard';
+      // Full navigation so every component re-reads the new session.
+      window.location.assign(safe);
     }
   };
 

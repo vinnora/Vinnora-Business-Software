@@ -306,7 +306,7 @@ export const SYSTEM_PERMISSIONS: { key: SystemPermissionKey; label: string; desc
   { key: 'modifyAllData', label: 'Modify All Data', description: 'Create, edit and delete every record in every module.' },
   { key: 'exportData', label: 'Export Data', description: 'Export records with Import & Export and export report results.' },
   { key: 'importData', label: 'Import Data', description: 'Insert, update, upsert and delete records in bulk with Import & Export.' },
-  { key: 'manageReports', label: 'Manage Public Reports & Dashboards', description: 'Create, edit and delete reports and dashboards shared with everyone.' },
+  { key: 'manageReports', label: 'Manage Public Reports & Home Dashboards', description: 'Create, edit and delete reports shared with everyone, and choose the reports shown on each app\'s Home.' },
   { key: 'manageSandboxes', label: 'Manage Test Workspaces & Deployments', description: 'Create, refresh and delete test workspaces, and deploy changes to production.' },
   { key: 'manageBilling', label: 'Manage Billing', description: 'Change the subscription plan and billing details.' },
 ];

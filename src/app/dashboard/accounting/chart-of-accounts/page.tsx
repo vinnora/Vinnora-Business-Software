@@ -12,6 +12,7 @@ import {
   SecondaryButton,
   Badge,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type Account = {
@@ -53,11 +54,12 @@ export default function ChartOfAccountsPage() {
 
   const save = async () => {
     if (!form.accountName || !form.accountNumber || !form.accountType) return;
-    await fetch('/api/accounting/chart-of-accounts', {
+    const res = await fetch('/api/accounting/chart-of-accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({ accountType: 'asset' });
     load();
@@ -65,7 +67,8 @@ export default function ChartOfAccountsPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this account?')) return;
-    await fetch(`/api/accounting/chart-of-accounts?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/accounting/chart-of-accounts?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

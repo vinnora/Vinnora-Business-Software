@@ -13,6 +13,7 @@ import {
   Badge,
   Tile,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type EWB = {
@@ -121,28 +122,31 @@ export default function EWayBillsPage() {
 
   const save = async () => {
     if (!form.fromGstin || !form.toGstin || !form.documentNumber) return;
-    await fetch('/api/inventory/eway-bills', {
+    const res = await fetch('/api/inventory/eway-bills', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm(empty());
     load();
   };
 
   const updateStatus = async (id: string, status: string) => {
-    await fetch('/api/inventory/eway-bills', {
+    const res = await fetch('/api/inventory/eway-bills', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, status }),
     });
+    if (!(await apiOk(res))) return;
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this E-Way Bill?')) return;
-    await fetch(`/api/inventory/eway-bills?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/eway-bills?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

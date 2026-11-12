@@ -13,6 +13,7 @@ import {
   Badge,
   Tile,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 const TYPES = ['product', 'shelf', 'shipping', 'qr', 'barcode', 'price-tag'];
@@ -96,17 +97,19 @@ export default function LabelsPage() {
   const save = async () => {
     if (!form.name) return;
     if (editing) {
-      await fetch('/api/inventory/label-templates', {
+      const res = await fetch('/api/inventory/label-templates', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editing._id, ...form }),
       });
+      if (!(await apiOk(res))) return;
     } else {
-      await fetch('/api/inventory/label-templates', {
+      const res = await fetch('/api/inventory/label-templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
+      if (!(await apiOk(res))) return;
     }
     setOpen(false);
     setEditing(null);
@@ -115,7 +118,8 @@ export default function LabelsPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this template?')) return;
-    await fetch(`/api/inventory/label-templates?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/label-templates?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

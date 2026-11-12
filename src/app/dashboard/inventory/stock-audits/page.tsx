@@ -12,6 +12,7 @@ import {
   Badge,
   Tile,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type Audit = {
@@ -68,11 +69,12 @@ export default function StockAuditsPage() {
   const create = async () => {
     if (!form.warehouseId) return;
     const wh = warehouses.find((w) => w._id === form.warehouseId);
-    await fetch('/api/inventory/stock-audits', {
+    const res = await fetch('/api/inventory/stock-audits', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, warehouseName: wh?.name }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({ type: 'full', scheduledDate: new Date().toISOString().slice(0, 10) });
     load();
@@ -90,29 +92,32 @@ export default function StockAuditsPage() {
 
   const saveCount = async () => {
     if (!selected) return;
-    await fetch('/api/inventory/stock-audits', {
+    const res = await fetch('/api/inventory/stock-audits', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: selected._id, lines: counts, status: 'in-progress' }),
     });
+    if (!(await apiOk(res))) return;
     setCountOpen(false);
     load();
   };
 
   const reconcile = async (id: string) => {
     if (!confirm('Reconcile audit and apply variances to actual stock?')) return;
-    await fetch('/api/inventory/stock-audits', {
+    const res = await fetch('/api/inventory/stock-audits', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, action: 'reconcile' }),
     });
+    if (!(await apiOk(res))) return;
     setCountOpen(false);
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this audit?')) return;
-    await fetch(`/api/inventory/stock-audits?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/stock-audits?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

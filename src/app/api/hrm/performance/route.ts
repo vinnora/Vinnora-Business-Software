@@ -1,71 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import HrmPerformanceReview from '@/models/HrmPerformanceReview';
 import { runHrmWorkflows } from '@/lib/hrm-workflows';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('hrm');
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get('employeeId');
     const status = searchParams.get('status');
     const type = searchParams.get('type');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (employeeId) filter.employeeId = employeeId;
     if (status) filter.status = status;
     if (type) filter.type = type;
-    const items = await HrmPerformanceReview.find(filter).sort({ updatedAt: -1 }).limit(200);
+    const items = await HrmPerformanceReview.find(t.where(filter)).sort({ updatedAt: -1 }).limit(200);
     return NextResponse.json(items);
   } catch (error) {
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching performance reviews:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('hrm');
+    t.requireWrite();
     const body = await req.json();
     if (!body.employeeId || !body.employeeName || !body.period) return NextResponse.json({ error: 'employeeId, employeeName and period required' }, { status: 400 });
-    const item = await HrmPerformanceReview.create({ ...body, userId });
-    await runHrmWorkflows({ objectType: 'PerformanceReview', event: 'created', record: item, userId });
+    const stamp = t.stamp();
+    const item = await HrmPerformanceReview.create({ ...sanitize(body), ...stamp });
+    await runHrmWorkflows({ objectType: 'PerformanceReview', event: 'created', record: item, userId: stamp.userId, scope: t.where() });
     return NextResponse.json(item, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error creating performance review:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('hrm');
+    t.requireWrite();
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const item = await HrmPerformanceReview.findByIdAndUpdate(_id, updates, { new: true });
-    if (item) {
-      await runHrmWorkflows({ objectType: 'PerformanceReview', event: 'fieldChanged', record: item, userId: item.userId, changedFields: Object.keys(updates) });
-    }
+    if (!body._id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const updates = sanitize(body);
+    const item = await HrmPerformanceReview.findOneAndUpdate(t.where({ _id: recordId(body._id) }), updates, { new: true, runValidators: true });
+    if (!item) throw new NotFoundError('Performance review not found');
+    await runHrmWorkflows({ objectType: 'PerformanceReview', event: 'fieldChanged', record: item, userId: item.userId, scope: t.where(), changedFields: Object.keys(updates) });
     return NextResponse.json(item);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating performance review:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('hrm');
+    t.requireWrite();
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await HrmPerformanceReview.findByIdAndDelete(id);
+    const rawId = searchParams.get('id');
+    if (!rawId) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    const res = await HrmPerformanceReview.deleteOne(t.where({ _id: recordId(rawId) }));
+    if (!res.deletedCount) throw new NotFoundError('Performance review not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting performance review:');
   }
 }

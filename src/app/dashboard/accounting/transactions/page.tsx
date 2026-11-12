@@ -12,6 +12,7 @@ import {
   SecondaryButton,
   Badge,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type Transaction = {
@@ -70,11 +71,12 @@ export default function TransactionsPage() {
 
   const save = async () => {
     if (!form.description || !form.amount || !form.category || !form.accountId) return;
-    await fetch('/api/accounting/transactions', {
+    const res = await fetch('/api/accounting/transactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, amount: Number(form.amount) }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({ transactionType: 'expense', date: new Date().toISOString().slice(0, 10) });
     load();
@@ -82,7 +84,8 @@ export default function TransactionsPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this transaction?')) return;
-    await fetch(`/api/accounting/transactions?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/accounting/transactions?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

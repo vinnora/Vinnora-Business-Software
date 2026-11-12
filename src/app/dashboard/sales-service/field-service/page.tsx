@@ -70,11 +70,12 @@ export default function FieldServicePage() {
   const save = async () => {
     if (!form.subject) return;
     const tech = techs.find((t) => t._id === form.technicianId);
-    await fetch('/api/sales-service/work-orders', {
+    const res = await fetch('/api/sales-service/work-orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, technicianName: tech?.name }),
     });
+    if (!res.ok) return alert((await res.json().catch(() => ({}))).error || 'Could not save');
     setOpen(false);
     setForm({ priority: 'Medium', status: 'New', lineItems: [] });
     load();
@@ -82,27 +83,30 @@ export default function FieldServicePage() {
 
   const moveStatus = async (id: string, status: string) => {
     setItems((prev) => prev.map((o) => (o._id === id ? { ...o, status } : o)));
-    await fetch('/api/sales-service/work-orders', {
+    const res = await fetch('/api/sales-service/work-orders', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, status }),
     });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not save');
     load();
   };
 
   const assignTech = async (id: string, technicianId: string) => {
     const tech = techs.find((t) => t._id === technicianId);
-    await fetch('/api/sales-service/work-orders', {
+    const res = await fetch('/api/sales-service/work-orders', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, technicianId, technicianName: tech?.name, status: 'Dispatched' }),
     });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not save');
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete?')) return;
-    await fetch(`/api/sales-service/work-orders?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/sales-service/work-orders?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     load();
   };
 

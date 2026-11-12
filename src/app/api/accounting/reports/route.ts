@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Transaction from '@/models/Transaction';
 import Invoice from '@/models/Invoice';
 import Bill from '@/models/Bill';
 import Asset from '@/models/Asset';
-import GeneralLedger from '@/models/GeneralLedger';
+import { getTenant, apiError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
 
     const { searchParams } = new URL(req.url);
     const reportType = searchParams.get('type');
@@ -28,19 +25,20 @@ export async function GET(req: NextRequest) {
     switch (reportType) {
       case 'income-statement': {
         // Income Statement (P&L)
-        const transactions = await Transaction.find({
-          userId,
-          status: 'posted',
-          ...(Object.keys(dateFilter).length && { date: dateFilter }),
-        });
+        const transactions = await Transaction.find(
+          t.where({
+            status: 'posted',
+            ...(Object.keys(dateFilter).length && { date: dateFilter }),
+          })
+        );
 
         const income = transactions
-          .filter((t) => t.transactionType === 'income')
-          .reduce((sum, t) => sum + t.amount, 0);
+          .filter((tx) => tx.transactionType === 'income')
+          .reduce((sum, tx) => sum + tx.amount, 0);
 
         const expenses = transactions
-          .filter((t) => t.transactionType === 'expense')
-          .reduce((sum, t) => sum + t.amount, 0);
+          .filter((tx) => tx.transactionType === 'expense')
+          .reduce((sum, tx) => sum + tx.amount, 0);
 
         report = {
           type: 'income-statement',
@@ -54,13 +52,13 @@ export async function GET(req: NextRequest) {
 
       case 'balance-sheet': {
         // Simplified Balance Sheet
-        const allTransactions = await Transaction.find({ userId });
+        const allTransactions = await Transaction.find(t.where());
         const assetAmount = allTransactions
-          .filter((t) => t.transactionType === 'income')
-          .reduce((sum, t) => sum + t.amount, 0);
+          .filter((tx) => tx.transactionType === 'income')
+          .reduce((sum, tx) => sum + tx.amount, 0);
         const liabilities = allTransactions
-          .filter((t) => t.transactionType === 'expense')
-          .reduce((sum, t) => sum + t.amount, 0);
+          .filter((tx) => tx.transactionType === 'expense')
+          .reduce((sum, tx) => sum + tx.amount, 0);
 
         report = {
           type: 'balance-sheet',
@@ -73,10 +71,7 @@ export async function GET(req: NextRequest) {
 
       case 'receivables': {
         // Aging of Receivables
-        const invoices = await Invoice.find({
-          userId,
-          status: { $in: ['sent', 'partial', 'overdue'] },
-        });
+        const invoices = await Invoice.find(t.where({ status: { $in: ['sent', 'partial', 'overdue'] } }));
 
         const aging = {
           current: invoices.filter(
@@ -113,10 +108,7 @@ export async function GET(req: NextRequest) {
 
       case 'payables': {
         // Aging of Payables
-        const bills = await Bill.find({
-          userId,
-          status: { $in: ['received', 'partial', 'overdue'] },
-        });
+        const bills = await Bill.find(t.where({ status: { $in: ['received', 'partial', 'overdue'] } }));
 
         const billAging = {
           current: bills.filter((bill) => bill.dueDate.getTime() > new Date().getTime())
@@ -144,7 +136,7 @@ export async function GET(req: NextRequest) {
       }
 
       case 'asset-summary': {
-        const fixedAssets = await Asset.find({ userId, status: 'active' });
+        const fixedAssets = await Asset.find(t.where({ status: 'active' }));
         report = {
           type: 'asset-summary',
           totalAssets: fixedAssets.length,
@@ -162,23 +154,15 @@ export async function GET(req: NextRequest) {
       default:
         report = {
           type: 'dashboard-summary',
-          totalInvoices: await Invoice.countDocuments({ userId }),
-          totalBills: await Bill.countDocuments({ userId }),
-          totalTransactions: await Transaction.countDocuments({ userId }),
-          totalAssets: await Asset.countDocuments({ userId, status: 'active' }),
+          totalInvoices: await Invoice.countDocuments(t.where()),
+          totalBills: await Bill.countDocuments(t.where()),
+          totalTransactions: await Transaction.countDocuments(t.where()),
+          totalAssets: await Asset.countDocuments(t.where({ status: 'active' })),
         };
     }
 
     return NextResponse.json(report);
   } catch (error) {
-    console.error('Error generating report:', error);
-    return NextResponse.json(
-      {
-        type: 'error',
-        message: 'Report generation failed',
-        data: {},
-      },
-      { status: 200 }
-    );
+    return apiError(error, 'Error generating report:');
   }
 }

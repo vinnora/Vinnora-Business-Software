@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import InventoryItem from '@/models/InventoryItem';
+import { getTenant, apiError } from '@/lib/tenant';
+import { objectIdWhere } from '@/app/api/inventory/_lib/object-id-scope';
 
 const mockInventoryData = [
   {
@@ -202,41 +204,39 @@ const mockInventoryData = [
   },
 ];
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
-    const userId = 'dev-user-id';
-
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Sample data is not available in production.' }, { status: 403 });
+    }
     await dbConnect();
+    const t = await getTenant('inventory');
+    t.requireAdmin();
 
-    // Clear existing items for fresh start
-    await InventoryItem.deleteMany({ userId });
+    // Never replace real data: only seed an empty workspace.
+    const existing = await InventoryItem.countDocuments(objectIdWhere(t));
+    if (existing > 0) {
+      return NextResponse.json(
+        { error: `This workspace already has ${existing} inventory item(s). Sample data is only added to an empty workspace.` },
+        { status: 409 },
+      );
+    }
 
-    // Add mock data
-    const itemsWithUserId = mockInventoryData.map(item => ({
-      ...item,
-      userId,
-    }));
-
-    const createdItems = await InventoryItem.insertMany(itemsWithUserId);
+    const createdItems = await InventoryItem.insertMany(mockInventoryData.map((item) => ({ ...item, userId: t.id })));
 
     return NextResponse.json({
       success: true,
-      message: `Successfully created ${createdItems.length} mock inventory items`,
+      message: `Successfully created ${createdItems.length} sample inventory items`,
       itemCount: createdItems.length,
       items: createdItems,
     });
   } catch (error) {
-    console.error('Failed to seed mock data:', error);
-    return NextResponse.json(
-      { error: 'Failed to seed mock data', details: String(error) },
-      { status: 500 }
-    );
+    return apiError(error, 'Failed to seed sample data:');
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   return NextResponse.json({
-    message: 'Use POST to seed mock inventory data. This will replace all existing items.',
-    instructions: 'POST /api/seed-inventory to populate 12 sample items across all categories',
+    message: 'POST (as a workspace admin, outside production) to add 12 sample items to an empty workspace.',
   });
 }

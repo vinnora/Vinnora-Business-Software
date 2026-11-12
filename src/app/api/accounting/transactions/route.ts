@@ -1,69 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Transaction from '@/models/Transaction';
 import { runAccountingWorkflows } from '@/lib/accounting-workflows';
 import GeneralLedger from '@/models/GeneralLedger';
-import ChartOfAccounts from '@/models/ChartOfAccounts';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
     const category = searchParams.get('category');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     if (category) filter.category = category;
 
-    const transactions = await Transaction.find(filter).sort({ date: -1 }).limit(50);
+    const transactions = await Transaction.find(t.where(filter)).sort({ date: -1 }).limit(50);
     return NextResponse.json(transactions);
   } catch (error) {
-    console.error('Error fetching transactions:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching transactions:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const t = await Transaction.findByIdAndUpdate(_id, updates, { new: true });
-    if (t) {
-      await runAccountingWorkflows({ objectType: 'Transaction', event: 'fieldChanged', record: t, userId: t.userId, changedFields: Object.keys(updates) });
-    }
-    return NextResponse.json(t);
+    if (!body._id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const updates = sanitize(body);
+    const txn = await Transaction.findOneAndUpdate(t.where({ _id: recordId(body._id) }), updates, {
+      new: true,
+      runValidators: true,
+    });
+    if (!txn) throw new NotFoundError('Transaction not found');
+    await runAccountingWorkflows({
+      objectType: 'Transaction',
+      event: 'fieldChanged',
+      record: txn,
+      userId: txn.userId,
+      scope: t.where(),
+      changedFields: Object.keys(updates),
+    });
+    return NextResponse.json(txn);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating transaction:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await Transaction.findByIdAndDelete(id);
-    await GeneralLedger.deleteMany({ transactionId: id });
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
+    const raw = new URL(req.url).searchParams.get('id');
+    if (!raw) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    const id = recordId(raw);
+    const res = await Transaction.deleteOne(t.where({ _id: id }));
+    if (!res.deletedCount) throw new NotFoundError('Transaction not found');
+    await GeneralLedger.deleteMany(t.where({ transactionId: id }));
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting transaction:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
+    t.requireWrite();
 
     const body = await req.json();
     const {
@@ -87,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     // Create transaction
     const transaction = new Transaction({
-      userId,
+      ...t.stamp(),
       transactionType,
       description,
       amount,
@@ -107,7 +119,7 @@ export async function POST(req: NextRequest) {
     if (transaction.transactionType === 'expense' || transaction.transactionType === 'income') {
       // Debit account
       const debitEntry = new GeneralLedger({
-        userId,
+        ...t.stamp(),
         transactionId: transaction._id.toString(),
         accountId,
         debit: transaction.transactionType === 'expense' ? amount : 0,
@@ -123,7 +135,7 @@ export async function POST(req: NextRequest) {
       // Update account balance
       if (counterAccountId) {
         const creditEntry = new GeneralLedger({
-          userId,
+          ...t.stamp(),
           transactionId: transaction._id.toString(),
           accountId: counterAccountId,
           debit: transaction.transactionType === 'income' ? amount : 0,
@@ -138,11 +150,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await runAccountingWorkflows({ objectType: 'Transaction', event: 'created', record: transaction, userId });
+    await runAccountingWorkflows({ objectType: 'Transaction', event: 'created', record: transaction, userId: transaction.userId, scope: t.where() });
 
     return NextResponse.json(transaction, { status: 201 });
   } catch (error) {
-    console.error('Error creating transaction:', error);
-    return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 });
+    return apiError(error, 'Error creating transaction:');
   }
 }

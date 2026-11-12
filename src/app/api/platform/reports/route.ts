@@ -24,7 +24,7 @@ export const POST = route(async (req) => {
   const { ctx, tenant } = await setupContext();
   const def = await cleanReportDefinition(ctx, await readJson(req));
   if (def.folder === 'public' && !(await canManagePublic(ctx))) {
-    throw new ForbiddenError('You need "Manage Public Reports & Dashboards" to save to the public folder.');
+    throw new ForbiddenError('You need "Manage Public Reports & Home Dashboards" to save to the public folder.');
   }
   const doc = await Report.create({
     ...def,

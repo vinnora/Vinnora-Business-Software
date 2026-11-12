@@ -1,68 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import MfgTraceabilityLog from '@/models/MfgTraceabilityLog';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('manufacturing');
     const { searchParams } = new URL(req.url);
     const batchNumber = searchParams.get('batchNumber');
     const workOrderId = searchParams.get('workOrderId');
     const stage = searchParams.get('stage');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (batchNumber) filter.batchNumber = batchNumber;
     if (workOrderId) filter.workOrderId = workOrderId;
     if (stage) filter.stage = stage;
-    const items = await MfgTraceabilityLog.find(filter).sort({ updatedAt: -1 }).limit(500);
+    const items = await MfgTraceabilityLog.find(t.where(filter)).sort({ updatedAt: -1 }).limit(500);
     return NextResponse.json(items);
   } catch (error) {
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching traceability logs:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('manufacturing');
+    t.requireWrite();
     const body = await req.json();
     if (!body.batchNumber) {
       return NextResponse.json({ error: 'batchNumber required' }, { status: 400 });
     }
-    const item = await MfgTraceabilityLog.create({ ...body, userId });
+    const item = await MfgTraceabilityLog.create({ ...sanitize(body), ...t.stamp() });
     return NextResponse.json(item, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error creating traceability log:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('manufacturing');
+    t.requireWrite();
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const item = await MfgTraceabilityLog.findByIdAndUpdate(_id, updates, { new: true });
+    const id = recordId(body._id);
+    const item = await MfgTraceabilityLog.findOneAndUpdate(t.where({ _id: id }), sanitize(body), { new: true, runValidators: true });
+    if (!item) throw new NotFoundError('Traceability log not found');
     return NextResponse.json(item);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating traceability log:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await MfgTraceabilityLog.findByIdAndDelete(id);
+    const t = await getTenant('manufacturing');
+    t.requireWrite();
+    const id = recordId(new URL(req.url).searchParams.get('id'));
+    const res = await MfgTraceabilityLog.deleteOne(t.where({ _id: id }));
+    if (!res.deletedCount) throw new NotFoundError('Traceability log not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting traceability log:');
   }
 }

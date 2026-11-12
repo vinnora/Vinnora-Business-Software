@@ -50,7 +50,7 @@ export default function SeedDataPage() {
         <CardHeader>
           <CardTitle>Seed Test Data</CardTitle>
           <CardDescription>
-            Generate mock inventory items for testing. This will replace any existing items.
+            Generate mock inventory items for testing. Only available outside production, for a workspace with no inventory items yet.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

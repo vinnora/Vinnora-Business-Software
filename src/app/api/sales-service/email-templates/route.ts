@@ -1,61 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import EmailTemplate from '@/models/EmailTemplate';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
-    const templates = await EmailTemplate.find({ userId }).sort({ name: 1 });
+    const t = await getTenant('sales-service');
+    const templates = await EmailTemplate.find(t.where()).sort({ name: 1 });
     return NextResponse.json(templates);
   } catch (error) {
-    console.error('Error fetching templates:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching templates:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('sales-service');
+    t.requireWrite();
     const body = await req.json();
     if (!body.name || !body.subject || !body.body) {
       return NextResponse.json({ error: 'name, subject, body required' }, { status: 400 });
     }
-    const t = await EmailTemplate.create({ ...body, userId });
-    return NextResponse.json(t, { status: 201 });
+    const template = await EmailTemplate.create({ ...sanitize(body), ...t.stamp() });
+    return NextResponse.json(template, { status: 201 });
   } catch (error) {
-    console.error('Error creating template:', error);
-    return NextResponse.json({ error: 'Failed to create template' }, { status: 500 });
+    return apiError(error, 'Error creating template:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('sales-service');
+    t.requireWrite();
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const t = await EmailTemplate.findByIdAndUpdate(_id, updates, { new: true });
-    return NextResponse.json(t);
+    const id = recordId(body._id);
+    const template = await EmailTemplate.findOneAndUpdate(t.where({ _id: id }), sanitize(body), { new: true, runValidators: true });
+    if (!template) throw new NotFoundError('Template not found');
+    return NextResponse.json(template);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating template:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await EmailTemplate.findByIdAndDelete(id);
+    const t = await getTenant('sales-service');
+    t.requireWrite();
+    const id = recordId(new URL(req.url).searchParams.get('id'));
+    const res = await EmailTemplate.deleteOne(t.where({ _id: id }));
+    if (!res.deletedCount) throw new NotFoundError('Template not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting template:');
   }
 }

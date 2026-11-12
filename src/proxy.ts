@@ -9,6 +9,7 @@ const ENV_COOKIE = 'vinnora-env';
 const SANDBOX_SAFE_API = [
   /^\/api\/auth(\/|$)/,
   /^\/api\/platform(\/|$)/,
+  /^\/api\/me(\/|$)/, // the user's own account, not workspace data
   /^\/api\/org(\/members|\/invitations)?(\/|$)/,
   /^\/api\/sales-service\/(leads|contacts|accounts|opportunities|cases)(\/|$)/,
 ];
@@ -29,8 +30,32 @@ export function proxy(req: NextRequest) {
     }
   }
 
-  // Authentication is intentionally bypassed during development (see src/lib/auth-middleware.ts).
+  // Sign-in is required unless the dev bypass is explicitly enabled (never in production).
+  const bypass = process.env.VINNORA_DEV_AUTH_BYPASS === 'true' && process.env.NODE_ENV !== 'production';
+  // The All Apps dashboard is open to everyone; each app (and Settings/Reports) needs a sign-in.
+  const isPublic = PUBLIC_PAGES.has(pathname) || PUBLIC_API.some((re) => re.test(pathname));
+  if (!bypass && !hasSessionCookie(req) && !isPublic) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Please sign in' }, { status: 401 });
+    }
+    const signIn = new URL('/auth/signin', req.url);
+    signIn.searchParams.set('callbackUrl', pathname + req.nextUrl.search);
+    return NextResponse.redirect(signIn);
+  }
+
   return NextResponse.next();
+}
+
+/** Pages reachable without signing in (the All Apps dashboard). */
+const PUBLIC_PAGES = new Set(['/dashboard', '/dashboard/']);
+
+/** APIs reachable without signing in. */
+const PUBLIC_API = [/^\/api\/auth(\/|$)/, /^\/api\/sales-service\/channel-inbound$/];
+
+function hasSessionCookie(req: NextRequest): boolean {
+  return Boolean(
+    req.cookies.get('next-auth.session-token')?.value || req.cookies.get('__Secure-next-auth.session-token')?.value,
+  );
 }
 
 export const config = {

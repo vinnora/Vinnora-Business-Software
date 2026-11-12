@@ -55,13 +55,16 @@ export default function OnboardingPage() {
     if (!form.employeeId || !form.startDate) return;
     const method = editing ? 'PATCH' : 'POST';
     const payload = editing ? { _id: editing._id, ...form } : form;
-    await fetch('/api/hrm/onboarding', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch('/api/hrm/onboarding', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not save'); return; }
     setOpen(false); setEditing(null); setForm(emptyForm()); load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this record?')) return;
-    await fetch(`/api/hrm/onboarding?id=${id}`, { method: 'DELETE' }); load();
+    const res = await fetch(`/api/hrm/onboarding?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not delete'); }
+    load();
   };
 
   const addTask = () => {

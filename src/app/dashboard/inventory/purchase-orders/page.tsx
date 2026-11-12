@@ -13,6 +13,7 @@ import {
   Badge,
   Tile,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type Line = {
@@ -147,7 +148,7 @@ export default function PurchaseOrdersPage() {
     if (!form.supplierId || form.lines.length === 0) return;
     const supplier = suppliers.find((s) => s._id === form.supplierId);
     const warehouse = warehouses.find((w) => w._id === form.warehouseId);
-    await fetch('/api/inventory/purchase-orders', {
+    const res = await fetch('/api/inventory/purchase-orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -156,33 +157,37 @@ export default function PurchaseOrdersPage() {
         warehouseName: warehouse?.name,
       }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm(empty());
     load();
   };
 
   const updateStatus = async (id: string, status: string) => {
-    await fetch('/api/inventory/purchase-orders', {
+    const res = await fetch('/api/inventory/purchase-orders', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, status }),
     });
+    if (!(await apiOk(res))) return;
     load();
   };
 
   const receiveAll = async (id: string) => {
     if (!confirm('Mark as fully received and increment warehouse stock?')) return;
-    await fetch('/api/inventory/purchase-orders', {
+    const res = await fetch('/api/inventory/purchase-orders', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, receiveAll: true }),
     });
+    if (!(await apiOk(res))) return;
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this PO?')) return;
-    await fetch(`/api/inventory/purchase-orders?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/purchase-orders?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

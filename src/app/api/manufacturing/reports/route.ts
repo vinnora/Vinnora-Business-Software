@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import MfgWorkOrder from '@/models/MfgWorkOrder';
 import MfgMaterial from '@/models/MfgMaterial';
@@ -8,12 +6,12 @@ import MfgMachine from '@/models/MfgMachine';
 import MfgQualityCheck from '@/models/MfgQualityCheck';
 import MfgSupplier from '@/models/MfgSupplier';
 import MfgPurchaseRequisition from '@/models/MfgPurchaseRequisition';
+import { getTenant, apiError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('manufacturing');
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type');
 
@@ -30,15 +28,15 @@ export async function GET(req: NextRequest) {
           totalSuppliers,
           openRequisitions,
         ] = await Promise.all([
-          MfgWorkOrder.countDocuments({ userId }),
-          MfgWorkOrder.countDocuments({ userId, status: 'In Progress' }),
-          MfgMaterial.countDocuments({ userId }),
-          MfgMaterial.countDocuments({ userId, $expr: { $lte: ['$currentStock', '$reorderPoint'] } }),
-          MfgMachine.countDocuments({ userId }),
-          MfgMachine.countDocuments({ userId, status: 'Operational' }),
-          MfgQualityCheck.countDocuments({ userId, status: 'Pending' }),
-          MfgSupplier.countDocuments({ userId }),
-          MfgPurchaseRequisition.countDocuments({ userId, status: 'Open' }),
+          MfgWorkOrder.countDocuments(t.where()),
+          MfgWorkOrder.countDocuments(t.where({ status: 'In Progress' })),
+          MfgMaterial.countDocuments(t.where()),
+          MfgMaterial.countDocuments(t.where({ $expr: { $lte: ['$currentStock', '$reorderPoint'] } })),
+          MfgMachine.countDocuments(t.where()),
+          MfgMachine.countDocuments(t.where({ status: 'Operational' })),
+          MfgQualityCheck.countDocuments(t.where({ status: 'Pending' })),
+          MfgSupplier.countDocuments(t.where()),
+          MfgPurchaseRequisition.countDocuments(t.where({ status: 'Open' })),
         ]);
         return NextResponse.json({
           totalWorkOrders,
@@ -56,6 +54,6 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Unknown report type' }, { status: 400 });
     }
   } catch (error) {
-    return NextResponse.json({ error: 'Report failed' }, { status: 500 });
+    return apiError(error, 'Error building manufacturing report:');
   }
 }

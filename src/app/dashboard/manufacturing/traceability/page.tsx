@@ -90,18 +90,24 @@ export default function TraceabilityPage() {
     if (!form.batchNumber) return;
     const lots = (form.materialLots || []).filter((l: MaterialLot) => l.materialName || l.lotNumber);
     const payload = { ...form, materialLots: lots };
+    let res: Response;
     if (editing) {
-      await fetch('/api/manufacturing/traceability', {
+      res = await fetch('/api/manufacturing/traceability', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editing._id, ...payload }),
       });
     } else {
-      await fetch('/api/manufacturing/traceability', {
+      res = await fetch('/api/manufacturing/traceability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+    }
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not save');
+      return;
     }
     setOpen(false);
     setForm(emptyForm());
@@ -111,7 +117,12 @@ export default function TraceabilityPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this traceability record?')) return;
-    await fetch(`/api/manufacturing/traceability?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/manufacturing/traceability?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not delete');
+      return;
+    }
     load();
   };
 

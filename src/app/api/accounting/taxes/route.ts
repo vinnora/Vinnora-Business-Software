@@ -1,62 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import TaxConfiguration from '@/models/TaxConfiguration';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
 
     const { searchParams } = new URL(req.url);
     const taxType = searchParams.get('taxType');
     const jurisdiction = searchParams.get('jurisdiction');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (taxType) filter.taxType = taxType;
     if (jurisdiction) filter.jurisdiction = jurisdiction;
 
-    const configs = await TaxConfiguration.find(filter).sort({ applicableFrom: -1 });
+    const configs = await TaxConfiguration.find(t.where(filter)).sort({ applicableFrom: -1 });
     return NextResponse.json(configs);
   } catch (error) {
-    console.error('Error fetching tax config:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching tax config:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const config = await TaxConfiguration.findByIdAndUpdate(_id, updates, { new: true });
+    if (!body._id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const config = await TaxConfiguration.findOneAndUpdate(t.where({ _id: recordId(body._id) }), sanitize(body), {
+      new: true,
+      runValidators: true,
+    });
+    if (!config) throw new NotFoundError('Tax configuration not found');
     return NextResponse.json(config);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating tax config:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await TaxConfiguration.findByIdAndDelete(id);
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
+    const raw = new URL(req.url).searchParams.get('id');
+    if (!raw) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    const res = await TaxConfiguration.deleteOne(t.where({ _id: recordId(raw) }));
+    if (!res.deletedCount) throw new NotFoundError('Tax configuration not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting tax config:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
+    t.requireWrite();
 
     const body = await req.json();
     const { taxType, taxRate, jurisdiction, applicableFrom, applicableTo, description, taxCode, notes } =
@@ -67,7 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     const config = new TaxConfiguration({
-      userId,
+      ...t.stamp(),
       taxType,
       taxRate,
       jurisdiction,
@@ -82,7 +88,6 @@ export async function POST(req: NextRequest) {
     await config.save();
     return NextResponse.json(config, { status: 201 });
   } catch (error) {
-    console.error('Error creating tax config:', error);
-    return NextResponse.json({ error: 'Failed to create tax config' }, { status: 500 });
+    return apiError(error, 'Error creating tax config:');
   }
 }

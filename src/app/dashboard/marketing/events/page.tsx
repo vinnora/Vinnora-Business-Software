@@ -41,13 +41,16 @@ export default function EventsPage() {
     const payload = { ...form, capacity: Number(form.capacity) || undefined, ticketPrice: Number(form.ticketPrice) || 0 };
     const method = editing ? 'PATCH' : 'POST';
     const body = editing ? { _id: editing._id, ...payload } : payload;
-    await fetch('/api/marketing/events', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch('/api/marketing/events', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error || 'Could not save'); return; }
     setOpen(false); setEditing(null); setForm(emptyForm()); load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this event?')) return;
-    await fetch(`/api/marketing/events?id=${id}`, { method: 'DELETE' }); load();
+    const res = await fetch(`/api/marketing/events?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
+    load();
   };
 
   return (

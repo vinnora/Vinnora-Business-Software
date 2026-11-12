@@ -62,13 +62,15 @@ export default function EmailPage() {
     if (!form.name || !form.subject) return;
     const method = editing ? 'PATCH' : 'POST';
     const payload = editing ? { _id: editing._id, ...form } : form;
-    await fetch('/api/marketing/email/messages', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch('/api/marketing/email/messages', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error || 'Could not save'); return; }
     setOpen(false); setEditing(null); setForm({}); loadMessages();
   };
 
   const removeMsg = async (id: string) => {
     if (!confirm('Delete this email?')) return;
-    await fetch(`/api/marketing/email/messages?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/marketing/email/messages?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     loadMessages();
   };
 
@@ -76,13 +78,15 @@ export default function EmailPage() {
     if (!tplForm.name || !tplForm.subject || !tplForm.bodyHtml) return;
     const method = tplEditing ? 'PATCH' : 'POST';
     const payload = tplEditing ? { _id: tplEditing._id, ...tplForm } : tplForm;
-    await fetch('/api/marketing/email/templates', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch('/api/marketing/email/templates', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error || 'Could not save'); return; }
     setTplOpen(false); setTplEditing(null); setTplForm({}); loadTemplates();
   };
 
   const removeTpl = async (id: string) => {
     if (!confirm('Delete this template?')) return;
-    await fetch(`/api/marketing/email/templates?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/marketing/email/templates?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     loadTemplates();
   };
 

@@ -88,6 +88,8 @@ export default function InventoryReportsPage() {
 }
 
 function ReportRenderer({ type, data }: { type: string; data: any }) {
+  if (data?.error) return <div className="text-sm text-red-600">{data.error}</div>;
+
   if (type === 'dashboard-summary') {
     return (
       <div>

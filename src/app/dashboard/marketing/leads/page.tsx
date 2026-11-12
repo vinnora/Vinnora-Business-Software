@@ -107,19 +107,21 @@ export default function MktLeadsPage() {
       ...form,
       score: Number(form.score) || 0,
     };
+    let res: Response;
     if (editing) {
-      await fetch('/api/marketing/leads', {
+      res = await fetch('/api/marketing/leads', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editing._id, ...payload }),
       });
     } else {
-      await fetch('/api/marketing/leads', {
+      res = await fetch('/api/marketing/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
     }
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error || 'Could not save'); return; }
     setOpen(false);
     setForm(emptyForm());
     setEditing(null);
@@ -128,7 +130,8 @@ export default function MktLeadsPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this enquiry?')) return;
-    await fetch(`/api/marketing/leads?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/marketing/leads?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     load();
   };
 

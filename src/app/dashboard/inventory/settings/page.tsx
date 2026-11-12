@@ -16,10 +16,8 @@ export default function InventorySettings() {
     autoReorder: false,
   });
 
-  const handleSave = () => {
-    // TODO: Save settings to database
-    alert('Settings saved!');
-  };
+  // There is no storage for these preferences yet (InventorySetting only holds picklist values), so the
+  // page does not pretend to save them. Picklists are managed in Inventory Setup.
 
   return (
     <div className="p-6">
@@ -86,7 +84,11 @@ export default function InventorySettings() {
             <p className="text-sm text-gray-500 mt-1">Automatically create reorder alerts when stock falls below reorder point.</p>
           </div>
 
-          <Button onClick={handleSave}>Save Settings</Button>
+          <p className="text-sm text-amber-700">
+            These preferences are not saved yet. To manage units, categories and other picklists, use{' '}
+            <Link href="/dashboard/inventory/setup" className="underline">Inventory Setup</Link>.
+          </p>
+          <Button disabled>Save Settings</Button>
         </CardContent>
       </Card>
     </div>

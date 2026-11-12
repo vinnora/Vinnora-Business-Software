@@ -1,28 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import SLA from '@/models/SLA';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
-
-    const slas = await SLA.find({ userId }).sort({ createdAt: -1 });
+    const t = await getTenant('sales-service');
+    const slas = await SLA.find(t.where()).sort({ createdAt: -1 });
     return NextResponse.json(slas);
   } catch (error) {
-    console.error('Error fetching SLAs:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching SLAs:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('sales-service');
+    t.requireWrite();
 
     const body = await req.json();
     if (!body.name || !body.firstResponseMinutes || !body.resolutionMinutes) {
@@ -32,38 +28,38 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const sla = await SLA.create({ ...body, userId });
+    const sla = await SLA.create({ ...sanitize(body), ...t.stamp() });
     return NextResponse.json(sla, { status: 201 });
   } catch (error) {
-    console.error('Error creating SLA:', error);
-    return NextResponse.json({ error: 'Failed to create SLA' }, { status: 500 });
+    return apiError(error, 'Error creating SLA:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('sales-service');
+    t.requireWrite();
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const sla = await SLA.findByIdAndUpdate(_id, updates, { new: true });
+    const id = recordId(body._id);
+    const sla = await SLA.findOneAndUpdate(t.where({ _id: id }), sanitize(body), { new: true, runValidators: true });
+    if (!sla) throw new NotFoundError('SLA not found');
     return NextResponse.json(sla);
   } catch (error) {
-    console.error('Error updating SLA:', error);
-    return NextResponse.json({ error: 'Failed to update SLA' }, { status: 500 });
+    return apiError(error, 'Error updating SLA:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await SLA.findByIdAndDelete(id);
+    const t = await getTenant('sales-service');
+    t.requireWrite();
+    const id = recordId(new URL(req.url).searchParams.get('id'));
+    const res = await SLA.deleteOne(t.where({ _id: id }));
+    if (!res.deletedCount) throw new NotFoundError('SLA not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting SLA:', error);
-    return NextResponse.json({ error: 'Failed to delete SLA' }, { status: 500 });
+    return apiError(error, 'Error deleting SLA:');
   }
 }

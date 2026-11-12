@@ -39,13 +39,16 @@ export default function ContentPage() {
     const payload = { ...form, fileSize: Number(form.fileSize) || undefined };
     const method = editing ? 'PATCH' : 'POST';
     const body = editing ? { _id: editing._id, ...payload } : payload;
-    await fetch('/api/marketing/content', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch('/api/marketing/content', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error || 'Could not save'); return; }
     setOpen(false); setEditing(null); setForm(emptyForm()); load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this asset?')) return;
-    await fetch(`/api/marketing/content?id=${id}`, { method: 'DELETE' }); load();
+    const res = await fetch(`/api/marketing/content?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
+    load();
   };
 
   const fmtSize = (bytes?: number) => {

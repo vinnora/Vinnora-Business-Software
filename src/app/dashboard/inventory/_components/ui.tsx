@@ -2,6 +2,14 @@
 
 import type { ReactNode } from 'react';
 
+/** For a save/delete response: true when it succeeded, otherwise shows the API's error and returns false. */
+export async function apiOk(res: Response, fallback = 'Could not save'): Promise<boolean> {
+  if (res.ok) return true;
+  const data = await res.json().catch(() => ({}));
+  alert((data && data.error) || fallback);
+  return false;
+}
+
 export const fmtINR = (n = 0) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 

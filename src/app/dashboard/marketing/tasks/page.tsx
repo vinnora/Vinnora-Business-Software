@@ -40,17 +40,21 @@ export default function TasksPage() {
     if (!form.title) return;
     const method = editing ? 'PATCH' : 'POST';
     const payload = editing ? { _id: editing._id, ...form } : form;
-    await fetch('/api/marketing/tasks', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch('/api/marketing/tasks', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error || 'Could not save'); return; }
     setOpen(false); setEditing(null); setForm(emptyForm()); load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this to-do?')) return;
-    await fetch(`/api/marketing/tasks?id=${id}`, { method: 'DELETE' }); load();
+    const res = await fetch(`/api/marketing/tasks?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
+    load();
   };
 
   const moveTask = async (task: Task, newStatus: string) => {
-    await fetch('/api/marketing/tasks', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _id: task._id, status: newStatus }) });
+    const res = await fetch('/api/marketing/tasks', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _id: task._id, status: newStatus }) });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not save');
     load();
   };
 

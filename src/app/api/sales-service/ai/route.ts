@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeSentiment, summarize, extractKeyPhrases } from '@/lib/insights';
+import { getTenant, apiError } from '@/lib/tenant';
 
 /**
  * AI insights endpoint. Currently uses local heuristics so it works offline;
@@ -9,6 +10,9 @@ import { analyzeSentiment, summarize, extractKeyPhrases } from '@/lib/insights';
  */
 export async function POST(req: NextRequest) {
   try {
+    // Signed-in users with Sell & Support access only; no records are read or written.
+    await getTenant('sales-service');
+
     const body = await req.json();
     const { action, text } = body;
     if (!action || !text) {
@@ -25,6 +29,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     }
   } catch (error) {
-    return NextResponse.json({ error: 'AI request failed' }, { status: 500 });
+    return apiError(error, 'AI request failed:');
   }
 }

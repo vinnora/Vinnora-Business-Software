@@ -11,6 +11,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   Badge,
+  apiOk,
 } from '../_components/ui';
 
 type Tax = {
@@ -59,11 +60,12 @@ export default function TaxesPage() {
 
   const save = async () => {
     if (!form.taxType || form.taxRate === undefined || !form.jurisdiction) return;
-    await fetch('/api/accounting/taxes', {
+    const res = await fetch('/api/accounting/taxes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, taxRate: Number(form.taxRate) }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({ taxType: 'gst', jurisdiction: 'India', applicableFrom: new Date().toISOString().slice(0, 10) });
     load();
@@ -71,7 +73,8 @@ export default function TaxesPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this tax config?')) return;
-    await fetch(`/api/accounting/taxes?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/accounting/taxes?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

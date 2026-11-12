@@ -29,7 +29,7 @@ export const PATCH = route<P>(async (req, { id }) => {
   if (!canView(ctx, doc) || !(await canEdit(ctx, doc))) throw new ForbiddenError("You can't edit this report.");
   const def = await cleanReportDefinition(ctx, await readJson(req));
   if (def.folder === 'public' && doc.folder !== 'public' && !(await canManagePublic(ctx))) {
-    throw new ForbiddenError('You need "Manage Public Reports & Dashboards" to move a report to the public folder.');
+    throw new ForbiddenError('You need "Manage Public Reports & Home Dashboards" to move a report to the public folder.');
   }
   doc.set(def);
   await doc.save();

@@ -37,17 +37,21 @@ export default function AutomationPage() {
     if (!form.name || !form.triggerType) return;
     const method = editing ? 'PATCH' : 'POST';
     const payload = editing ? { _id: editing._id, ...form } : form;
-    await fetch('/api/marketing/automation', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch('/api/marketing/automation', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error || 'Could not save'); return; }
     setOpen(false); setEditing(null); setForm(emptyForm()); load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this automation?')) return;
-    await fetch(`/api/marketing/automation?id=${id}`, { method: 'DELETE' }); load();
+    const res = await fetch(`/api/marketing/automation?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
+    load();
   };
 
   const toggleActive = async (a: Automation) => {
-    await fetch('/api/marketing/automation', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _id: a._id, active: !a.active }) });
+    const res = await fetch('/api/marketing/automation', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _id: a._id, active: !a.active }) });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not save');
     load();
   };
 

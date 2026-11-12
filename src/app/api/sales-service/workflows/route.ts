@@ -1,33 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import WorkflowRule from '@/models/WorkflowRule';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('sales-service');
 
     const { searchParams } = new URL(req.url);
     const objectType = searchParams.get('objectType');
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (objectType) filter.objectType = objectType;
 
-    const rules = await WorkflowRule.find(filter).sort({ createdAt: -1 });
+    const rules = await WorkflowRule.find(t.where(filter)).sort({ createdAt: -1 });
     return NextResponse.json(rules);
   } catch (error) {
-    console.error('Error fetching workflows:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching workflows:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('sales-service');
+    t.requireWrite();
     const body = await req.json();
     if (!body.name || !body.objectType || !body.triggerEvent) {
       return NextResponse.json(
@@ -35,38 +32,38 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const rule = await WorkflowRule.create({ ...body, userId });
+    const rule = await WorkflowRule.create({ ...sanitize(body), ...t.stamp() });
     return NextResponse.json(rule, { status: 201 });
   } catch (error) {
-    console.error('Error creating workflow:', error);
-    return NextResponse.json({ error: 'Failed to create workflow' }, { status: 500 });
+    return apiError(error, 'Error creating workflow:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('sales-service');
+    t.requireWrite();
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const rule = await WorkflowRule.findByIdAndUpdate(_id, updates, { new: true });
+    const id = recordId(body._id);
+    const rule = await WorkflowRule.findOneAndUpdate(t.where({ _id: id }), sanitize(body), { new: true, runValidators: true });
+    if (!rule) throw new NotFoundError('Workflow not found');
     return NextResponse.json(rule);
   } catch (error) {
-    console.error('Error updating workflow:', error);
-    return NextResponse.json({ error: 'Failed to update workflow' }, { status: 500 });
+    return apiError(error, 'Error updating workflow:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await WorkflowRule.findByIdAndDelete(id);
+    const t = await getTenant('sales-service');
+    t.requireWrite();
+    const id = recordId(new URL(req.url).searchParams.get('id'));
+    const res = await WorkflowRule.deleteOne(t.where({ _id: id }));
+    if (!res.deletedCount) throw new NotFoundError('Workflow not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting workflow:', error);
-    return NextResponse.json({ error: 'Failed to delete workflow' }, { status: 500 });
+    return apiError(error, 'Error deleting workflow:');
   }
 }

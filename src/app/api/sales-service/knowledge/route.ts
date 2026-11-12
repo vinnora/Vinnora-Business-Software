@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import KnowledgeArticle from '@/models/KnowledgeArticle';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 function slugify(s: string) {
   return s
@@ -15,15 +14,14 @@ function slugify(s: string) {
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('sales-service');
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
     const category = searchParams.get('category');
     const search = searchParams.get('search');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     if (category) filter.category = category;
     if (search) {
@@ -34,19 +32,18 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const articles = await KnowledgeArticle.find(filter).sort({ updatedAt: -1 }).limit(200);
+    const articles = await KnowledgeArticle.find(t.where(filter)).sort({ updatedAt: -1 }).limit(200);
     return NextResponse.json(articles);
   } catch (error) {
-    console.error('Error fetching articles:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching articles:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('sales-service');
+    t.requireWrite();
 
     const body = await req.json();
     if (!body.title || !body.body) {
@@ -57,47 +54,49 @@ export async function POST(req: NextRequest) {
     }
 
     const article = await KnowledgeArticle.create({
-      ...body,
-      userId,
+      ...sanitize(body),
+      ...t.stamp(),
       slug: body.slug || slugify(body.title),
       publishedAt: body.status === 'Published' ? new Date() : undefined,
     });
     return NextResponse.json(article, { status: 201 });
   } catch (error) {
-    console.error('Error creating article:', error);
-    return NextResponse.json({ error: 'Failed to create help article' }, { status: 500 });
+    return apiError(error, 'Error creating article:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('sales-service');
+    t.requireWrite();
+
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const id = recordId(body._id);
+    const updates: Record<string, unknown> = sanitize(body);
 
     if (updates.status === 'Published' && !updates.publishedAt) {
       updates.publishedAt = new Date();
     }
 
-    const article = await KnowledgeArticle.findByIdAndUpdate(_id, updates, { new: true });
+    const article = await KnowledgeArticle.findOneAndUpdate(t.where({ _id: id }), updates, { new: true, runValidators: true });
+    if (!article) throw new NotFoundError('Help article not found');
     return NextResponse.json(article);
   } catch (error) {
-    console.error('Error updating article:', error);
-    return NextResponse.json({ error: 'Failed to update help article' }, { status: 500 });
+    return apiError(error, 'Error updating article:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await KnowledgeArticle.findByIdAndDelete(id);
+    const t = await getTenant('sales-service');
+    t.requireWrite();
+    const id = recordId(new URL(req.url).searchParams.get('id'));
+    const res = await KnowledgeArticle.deleteOne(t.where({ _id: id }));
+    if (!res.deletedCount) throw new NotFoundError('Help article not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting article:', error);
-    return NextResponse.json({ error: 'Failed to delete help article' }, { status: 500 });
+    return apiError(error, 'Error deleting article:');
   }
 }

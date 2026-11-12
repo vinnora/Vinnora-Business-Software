@@ -31,6 +31,12 @@ const TABS: { id: Tab; label: string; desc: string }[] = [
 
 export default function SetupPage() {
   const [tab, setTab] = useState<Tab>('workflows');
+  // Open the tab named in ?tab= (e.g. when coming back from workspace-wide Settings).
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from the URL after hydration
+    if (t && TABS.some((x) => x.id === t)) setTab(t as Tab);
+  }, []);
   return (
     <>
       <PageHeader title="Settings" subtitle="Customize your CRM" />
@@ -132,11 +138,12 @@ function WorkflowsTab() {
 
   const save = async () => {
     if (!form.name) return;
-    await fetch('/api/sales-service/workflows', {
+    const res = await fetch('/api/sales-service/workflows', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
+    if (!res.ok) return alert((await res.json().catch(() => ({}))).error || 'Could not save');
     setOpen(false);
     setForm({
       objectType: 'Lead',
@@ -150,17 +157,19 @@ function WorkflowsTab() {
   };
 
   const toggle = async (rule: any) => {
-    await fetch('/api/sales-service/workflows', {
+    const res = await fetch('/api/sales-service/workflows', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: rule._id, active: !rule.active }),
     });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not save');
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this rule?')) return;
-    await fetch(`/api/sales-service/workflows?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/sales-service/workflows?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     load();
   };
 
@@ -396,16 +405,18 @@ function TemplatesTab() {
 
   const save = async () => {
     if (!form.name || !form.subject || !form.body) return;
-    await fetch('/api/sales-service/email-templates', {
+    const res = await fetch('/api/sales-service/email-templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
+    if (!res.ok) return alert((await res.json().catch(() => ({}))).error || 'Could not save');
     setOpen(false); setForm({}); load();
   };
   const remove = async (id: string) => {
     if (!confirm('Delete?')) return;
-    await fetch(`/api/sales-service/email-templates?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/sales-service/email-templates?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     load();
   };
 
@@ -479,15 +490,17 @@ function SlasTab() {
 
   const save = async () => {
     if (!form.name) return;
-    await fetch('/api/sales-service/slas', {
+    const res = await fetch('/api/sales-service/slas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
+    if (!res.ok) return alert((await res.json().catch(() => ({}))).error || 'Could not save');
     setOpen(false); load();
   };
   const remove = async (id: string) => {
-    await fetch(`/api/sales-service/slas?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/sales-service/slas?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     load();
   };
 
@@ -575,7 +588,7 @@ function TechniciansTab() {
 
   const save = async () => {
     if (!form.name) return;
-    await fetch('/api/sales-service/technicians', {
+    const res = await fetch('/api/sales-service/technicians', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -584,10 +597,12 @@ function TechniciansTab() {
         territories: typeof form.territories === 'string' ? form.territories.split(',').map((s: string) => s.trim()) : form.territories,
       }),
     });
+    if (!res.ok) return alert((await res.json().catch(() => ({}))).error || 'Could not save');
     setOpen(false); setForm({ active: true }); load();
   };
   const remove = async (id: string) => {
-    await fetch(`/api/sales-service/technicians?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/sales-service/technicians?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     load();
   };
 
@@ -653,14 +668,21 @@ function TechniciansTab() {
 
 function ChannelsTab() {
   const [origin, setOrigin] = useState('');
+  // Workspace slug: identifies this workspace when the form is posted by a signed-out visitor.
+  const [slug, setSlug] = useState<string | null>(null);
   useEffect(() => {
     if (typeof window !== 'undefined') setOrigin(window.location.origin);
+    fetch('/api/org')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((org) => setSlug(org?.slug || ''))
+      .catch(() => setSlug(''));
   }, []);
 
   const endpoint = `${origin}/api/sales-service/channel-inbound`;
   const exampleCurl = `curl -X POST ${endpoint} \\
   -H "Content-Type: application/json" \\
   -d '{
+    "workspace": "${slug || '<workspace>'}",
     "channel": "email",
     "fromName": "Jane Doe",
     "fromAddress": "jane@example.com",
@@ -669,6 +691,7 @@ function ChannelsTab() {
   }'`;
 
   const webForm = `<form action="${endpoint}" method="POST" enctype="application/x-www-form-urlencoded">
+  <input type="hidden" name="workspace" value="${slug || ''}" />
   <input type="hidden" name="channel" value="web" />
   <input type="text" name="fromName" placeholder="Your name" required />
   <input type="email" name="fromAddress" placeholder="Email" required />
@@ -699,7 +722,15 @@ function ChannelsTab() {
 
       <div className="bg-white border border-gray-200 rounded p-4">
         <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Website ticket form snippet</div>
-        <pre className="text-xs font-mono bg-gray-50 p-3 rounded overflow-x-auto whitespace-pre-wrap">{webForm}</pre>
+        {slug === null ? (
+          <div className="text-sm text-gray-500">Loading…</div>
+        ) : slug ? (
+          <pre className="text-xs font-mono bg-gray-50 p-3 rounded overflow-x-auto whitespace-pre-wrap">{webForm}</pre>
+        ) : (
+          <p className="text-sm text-gray-600">
+            The website ticket form needs a workspace, so tickets know where to go. Create a workspace first.
+          </p>
+        )}
       </div>
 
       <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-blue-900">
@@ -725,7 +756,8 @@ function SalesIntegrationsTab() {
   useEffect(() => { load(); }, []);
 
   const toggle = async (item: any) => {
-    await fetch('/api/integrations', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _id: item._id, active: !item.active }) });
+    const res = await fetch('/api/integrations', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _id: item._id, active: !item.active }) });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not save');
     load();
   };
 
@@ -774,7 +806,8 @@ function SalesConnectionsTab() {
   useEffect(() => { load(); }, []);
 
   const toggle = async (item: any) => {
-    await fetch('/api/connections', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _id: item._id, active: !item.active }) });
+    const res = await fetch('/api/connections', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _id: item._id, active: !item.active }) });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not save');
     load();
   };
 

@@ -13,6 +13,7 @@ import {
   Badge,
   Tile,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type Item = {
@@ -63,7 +64,7 @@ export default function RawMaterialsPage() {
 
   const save = async () => {
     if (!form.name || !form.category) return;
-    await fetch('/api/inventory/items', {
+    const res = await fetch('/api/inventory/items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -74,6 +75,7 @@ export default function RawMaterialsPage() {
         reorderQuantity: Number(form.reorderQuantity),
       }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({
       type: 'raw',
@@ -88,7 +90,8 @@ export default function RawMaterialsPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this raw material?')) return;
-    await fetch(`/api/inventory/items?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/items?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

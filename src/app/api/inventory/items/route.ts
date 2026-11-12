@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Item from '@/models/Item';
 import { runInventoryWorkflows, checkAndTriggerReorder } from '@/lib/inventory-workflows';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 function genItemCode() {
   const year = new Date().getFullYear();
@@ -14,8 +13,7 @@ function genItemCode() {
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('inventory');
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search');
@@ -25,7 +23,7 @@ export async function GET(req: NextRequest) {
     const lowStock = searchParams.get('lowStock');
     const expiring = searchParams.get('expiring');
 
-    const filter: any = { userId };
+    const filter: any = {};
     if (category) filter.category = category;
     if (type) filter.type = type;
     if (status) filter.status = status;
@@ -47,19 +45,18 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    const items = await Item.find(filter).sort({ updatedAt: -1 }).limit(500);
+    const items = await Item.find(t.where(filter)).sort({ updatedAt: -1 }).limit(500);
     return NextResponse.json(items);
   } catch (error) {
-    console.error('Error fetching items:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching items:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('inventory');
+    t.requireWrite();
 
     const body = await req.json();
     if (!body.name || !body.category) {
@@ -67,32 +64,37 @@ export async function POST(req: NextRequest) {
     }
 
     const item = await Item.create({
-      ...body,
-      userId,
+      ...sanitize(body),
+      ...t.stamp(),
       itemCode: body.itemCode || genItemCode(),
     });
 
+    const ws = { orgId: t.orgId, scope: t.where() };
     await runInventoryWorkflows({
       objectType: 'Item',
       event: 'created',
       record: item,
-      userId,
+      userId: item.userId,
+      ...ws,
     });
-    await checkAndTriggerReorder(item, userId);
+    await checkAndTriggerReorder(item, item.userId, ws);
 
     return NextResponse.json(item, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating item:', error);
-    return NextResponse.json({ error: error.message || 'Failed to create item' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error creating item:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('inventory');
+    t.requireWrite();
+
     const body = await req.json();
-    const { _id, ...updates } = body;
+    const { _id, ...rest } = body;
     if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const updates: any = sanitize(rest);
 
     if (updates.warehouseStocks) {
       updates.totalStock = updates.warehouseStocks.reduce(
@@ -101,32 +103,41 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const item = await Item.findByIdAndUpdate(_id, updates, { new: true });
-    if (item) {
-      await runInventoryWorkflows({
-        objectType: 'Item',
-        event: 'fieldChanged',
-        record: item,
-        userId: item.userId,
-        changedFields: Object.keys(updates),
-      });
-      await checkAndTriggerReorder(item, item.userId);
-    }
+    const item = await Item.findOneAndUpdate(t.where({ _id: recordId(_id) }), updates, {
+      new: true,
+      runValidators: true,
+    });
+    if (!item) throw new NotFoundError('Item not found');
+
+    const ws = { orgId: t.orgId, scope: t.where() };
+    await runInventoryWorkflows({
+      objectType: 'Item',
+      event: 'fieldChanged',
+      record: item,
+      userId: item.userId,
+      ...ws,
+      changedFields: Object.keys(updates),
+    });
+    await checkAndTriggerReorder(item, item.userId, ws);
     return NextResponse.json(item);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating item:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('inventory');
+    t.requireWrite();
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await Item.findByIdAndDelete(id);
+    const res = await Item.deleteOne(t.where({ _id: recordId(id) }));
+    if (!res.deletedCount) throw new NotFoundError('Item not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting item:');
   }
 }

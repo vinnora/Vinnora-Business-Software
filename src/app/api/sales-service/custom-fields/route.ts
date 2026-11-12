@@ -1,30 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import CustomFieldDef from '@/models/CustomFieldDef';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('sales-service');
     const { searchParams } = new URL(req.url);
     const objectType = searchParams.get('objectType');
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (objectType) filter.objectType = objectType;
-    const fields = await CustomFieldDef.find(filter).sort({ objectType: 1, order: 1 });
+    const fields = await CustomFieldDef.find(t.where(filter)).sort({ objectType: 1, order: 1 });
     return NextResponse.json(fields);
   } catch (error) {
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching custom fields:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('sales-service');
+    t.requireWrite();
     const body = await req.json();
     if (!body.name || !body.objectType || !body.type) {
       return NextResponse.json(
@@ -38,35 +36,38 @@ export async function POST(req: NextRequest) {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '_')
         .replace(/^_|_$/g, '') + '__c';
-    const f = await CustomFieldDef.create({ ...body, userId, apiName });
+    const f = await CustomFieldDef.create({ ...sanitize(body), ...t.stamp(), apiName });
     return NextResponse.json(f, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+    return apiError(error, 'Error creating custom field:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('sales-service');
+    t.requireWrite();
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const f = await CustomFieldDef.findByIdAndUpdate(_id, updates, { new: true });
+    const id = recordId(body._id);
+    const f = await CustomFieldDef.findOneAndUpdate(t.where({ _id: id }), sanitize(body), { new: true, runValidators: true });
+    if (!f) throw new NotFoundError('Custom field not found');
     return NextResponse.json(f);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+    return apiError(error, 'Error updating custom field:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await CustomFieldDef.findByIdAndDelete(id);
+    const t = await getTenant('sales-service');
+    t.requireWrite();
+    const id = recordId(new URL(req.url).searchParams.get('id'));
+    const res = await CustomFieldDef.deleteOne(t.where({ _id: id }));
+    if (!res.deletedCount) throw new NotFoundError('Custom field not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+    return apiError(error, 'Error deleting custom field:');
   }
 }

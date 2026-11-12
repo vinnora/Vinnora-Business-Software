@@ -11,6 +11,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   Badge,
+  apiOk,
 } from '../_components/ui';
 import { SubscriptionPlan } from '@/components/SubscriptionPlan';
 import { ModuleAccessLink, ModuleObjectManager } from '@/components/platform/ModuleSetupTabs';
@@ -86,6 +87,12 @@ const emptyForm = {
 
 export default function AccountingSetupPage() {
   const [tab, setTab] = useState<Tab>('general');
+  // Open the tab named in ?tab= (e.g. when coming back from workspace-wide Settings).
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from the URL after hydration
+    if (t && TABS.some((x) => x.id === t)) setTab(t as Tab);
+  }, []);
 
   return (
     <>
@@ -179,11 +186,12 @@ function WorkflowsTab() {
     if (!form.name) return;
     const method = editing ? 'PATCH' : 'POST';
     const payload = editing ? { _id: editing._id, ...form } : form;
-    await fetch('/api/accounting/workflows', {
+    const res = await fetch('/api/accounting/workflows', {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setEditing(null);
     setForm({ ...emptyForm });
@@ -191,17 +199,19 @@ function WorkflowsTab() {
   };
 
   const toggleWorkflow = async (w: WorkflowRule) => {
-    await fetch('/api/accounting/workflows', {
+    const res = await fetch('/api/accounting/workflows', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: w._id, active: !w.active }),
     });
+    await apiOk(res);
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this workflow rule?')) return;
-    await fetch(`/api/accounting/workflows?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/accounting/workflows?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

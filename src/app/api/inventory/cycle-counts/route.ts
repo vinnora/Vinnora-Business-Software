@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import CycleCount from '@/models/CycleCount';
 import Item from '@/models/Item';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
+import { isObjectIdString } from '../_lib/object-id-scope';
 
 function genCountNumber() {
   const year = new Date().getFullYear();
@@ -14,24 +14,23 @@ function genCountNumber() {
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('inventory');
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
-    const filter: any = { userId };
+    const filter: any = {};
     if (status) filter.status = status;
-    const items = await CycleCount.find(filter).sort({ scheduledDate: -1 }).limit(200);
+    const items = await CycleCount.find(t.where(filter)).sort({ scheduledDate: -1 }).limit(200);
     return NextResponse.json(items);
-  } catch {
-    return NextResponse.json([], { status: 200 });
+  } catch (error) {
+    return apiError(error, 'Error fetching cycle counts:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('inventory');
+    t.requireWrite();
     const body = await req.json();
     if (!body.warehouseId) {
       return NextResponse.json({ error: 'warehouseId required' }, { status: 400 });
@@ -40,9 +39,9 @@ export async function POST(req: NextRequest) {
     // Auto-generate lines based on ABC class filter or category
     let lines = body.lines || [];
     if (lines.length === 0) {
-      const filter: any = { userId };
+      const filter: any = {};
       if (body.categoryFilter) filter.category = body.categoryFilter;
-      const items = await Item.find(filter).limit(200);
+      const items = await Item.find(t.where(filter)).limit(200);
       lines = items
         .map((item: any) => {
           const ws = item.warehouseStocks.find((w: any) => w.warehouseId === body.warehouseId);
@@ -68,30 +67,35 @@ export async function POST(req: NextRequest) {
     }
 
     const cc = await CycleCount.create({
-      ...body,
-      userId,
+      ...sanitize(body),
+      ...t.stamp(),
       countNumber: body.countNumber || genCountNumber(),
       lines,
     });
     return NextResponse.json(cc, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error creating cycle count:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('inventory');
+    t.requireWrite();
     const body = await req.json();
-    const { _id, action, ...updates } = body;
+    const { _id, action, ...rest } = body;
     if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const updates: any = sanitize(rest);
+    const countId = recordId(_id);
 
     if (action === 'reconcile') {
-      const cc = await CycleCount.findById(_id);
-      if (!cc) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      const cc = await CycleCount.findOne(t.where({ _id: countId }));
+      if (!cc) throw new NotFoundError('Cycle count not found');
       for (const line of cc.lines) {
         if (line.variance === 0) continue;
-        const item = await Item.findById(line.itemId);
+        if (!isObjectIdString(line.itemId)) continue;
+        const item = await Item.findOne(t.where({ _id: line.itemId }));
         if (!item) continue;
         const idx = item.warehouseStocks.findIndex(
           (w: any) => w.warehouseId === cc.warehouseId
@@ -128,22 +132,29 @@ export async function PATCH(req: NextRequest) {
       updates.itemsWithVariance = varianceCount;
     }
 
-    const updated = await CycleCount.findByIdAndUpdate(_id, updates, { new: true });
+    const updated = await CycleCount.findOneAndUpdate(t.where({ _id: countId }), updates, {
+      new: true,
+      runValidators: true,
+    });
+    if (!updated) throw new NotFoundError('Cycle count not found');
     return NextResponse.json(updated);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error updating cycle count:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('inventory');
+    t.requireWrite();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await CycleCount.findByIdAndDelete(id);
+    const res = await CycleCount.deleteOne(t.where({ _id: recordId(id) }));
+    if (!res.deletedCount) throw new NotFoundError('Cycle count not found');
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error deleting cycle count:');
   }
 }

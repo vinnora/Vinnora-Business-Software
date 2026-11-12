@@ -87,18 +87,24 @@ export default function MachinesPage() {
       ...form,
       hoursOperated: Number(form.hoursOperated) || 0,
     };
+    let res: Response;
     if (editing) {
-      await fetch('/api/manufacturing/machines', {
+      res = await fetch('/api/manufacturing/machines', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editing._id, ...payload }),
       });
     } else {
-      await fetch('/api/manufacturing/machines', {
+      res = await fetch('/api/manufacturing/machines', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+    }
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not save');
+      return;
     }
     setOpen(false);
     setForm(emptyForm());
@@ -108,7 +114,12 @@ export default function MachinesPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this machine?')) return;
-    await fetch(`/api/manufacturing/machines?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/manufacturing/machines?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not delete');
+      return;
+    }
     load();
   };
 

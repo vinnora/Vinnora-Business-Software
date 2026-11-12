@@ -108,18 +108,15 @@ export default function AttendancePage() {
   const save = async () => {
     if (!form.employeeId || !form.date) return;
     const payload = { ...form };
-    if (editing) {
-      await fetch('/api/hrm/attendance', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: editing._id, ...payload }),
-      });
-    } else {
-      await fetch('/api/hrm/attendance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+    const res = await fetch('/api/hrm/attendance', {
+      method: editing ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editing ? { _id: editing._id, ...payload } : payload),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Could not save');
+      return;
     }
     setOpen(false);
     setForm(emptyForm());
@@ -129,7 +126,11 @@ export default function AttendancePage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this attendance record?')) return;
-    await fetch(`/api/hrm/attendance?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/hrm/attendance?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Could not delete');
+    }
     load();
   };
 

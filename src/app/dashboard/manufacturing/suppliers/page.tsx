@@ -89,18 +89,24 @@ export default function SuppliersPage() {
       ...form,
       rating: Number(form.rating) || 0,
     };
+    let res: Response;
     if (editing) {
-      await fetch('/api/manufacturing/suppliers', {
+      res = await fetch('/api/manufacturing/suppliers', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editing._id, ...payload }),
       });
     } else {
-      await fetch('/api/manufacturing/suppliers', {
+      res = await fetch('/api/manufacturing/suppliers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+    }
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not save');
+      return;
     }
     setOpen(false);
     setForm(emptyForm());
@@ -110,7 +116,12 @@ export default function SuppliersPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this supplier?')) return;
-    await fetch(`/api/manufacturing/suppliers?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/manufacturing/suppliers?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not delete');
+      return;
+    }
     load();
   };
 

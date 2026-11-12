@@ -73,28 +73,31 @@ export default function ActivitiesPage() {
 
   const save = async () => {
     if (!form.type || !form.subject) return;
-    await fetch('/api/sales-service/activities', {
+    const res = await fetch('/api/sales-service/activities', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
+    if (!res.ok) return alert((await res.json().catch(() => ({}))).error || 'Could not save');
     setOpen(false);
     setForm({ type: 'Task', status: 'Open', priority: 'Normal' });
     load();
   };
 
   const complete = async (id: string) => {
-    await fetch('/api/sales-service/activities', {
+    const res = await fetch('/api/sales-service/activities', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, status: 'Completed' }),
     });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not save');
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this follow-up?')) return;
-    await fetch(`/api/sales-service/activities?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/sales-service/activities?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     load();
   };
 

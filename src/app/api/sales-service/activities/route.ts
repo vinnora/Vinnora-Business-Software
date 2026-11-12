@@ -1,40 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Activity from '@/models/Activity';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('sales-service');
 
     const { searchParams } = new URL(req.url);
     const relatedToId = searchParams.get('relatedToId');
     const type = searchParams.get('type');
     const status = searchParams.get('status');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (relatedToId) filter.relatedToId = relatedToId;
     if (type) filter.type = type;
     if (status) filter.status = status;
 
-    const activities = await Activity.find(filter)
+    const activities = await Activity.find(t.where(filter))
       .sort({ dueDate: -1, createdAt: -1 })
       .limit(200);
     return NextResponse.json(activities);
   } catch (error) {
-    console.error('Error fetching activities:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching activities:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('sales-service');
+    t.requireWrite();
 
     const body = await req.json();
     if (!body.type || !body.subject) {
@@ -44,43 +41,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const activity = await Activity.create({ ...body, userId });
+    const activity = await Activity.create({ ...sanitize(body), ...t.stamp() });
     return NextResponse.json(activity, { status: 201 });
   } catch (error) {
-    console.error('Error creating activity:', error);
-    return NextResponse.json({ error: 'Failed to create follow-up' }, { status: 500 });
+    return apiError(error, 'Error creating activity:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('sales-service');
+    t.requireWrite();
+
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const id = recordId(body._id);
+    const updates: Record<string, unknown> = sanitize(body);
 
     if (updates.status === 'Completed' && !updates.completedAt) {
       updates.completedAt = new Date();
     }
 
-    const activity = await Activity.findByIdAndUpdate(_id, updates, { new: true });
+    const activity = await Activity.findOneAndUpdate(t.where({ _id: id }), updates, { new: true, runValidators: true });
+    if (!activity) throw new NotFoundError('Follow-up not found');
     return NextResponse.json(activity);
   } catch (error) {
-    console.error('Error updating activity:', error);
-    return NextResponse.json({ error: 'Failed to update follow-up' }, { status: 500 });
+    return apiError(error, 'Error updating activity:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await Activity.findByIdAndDelete(id);
+    const t = await getTenant('sales-service');
+    t.requireWrite();
+
+    const id = recordId(new URL(req.url).searchParams.get('id'));
+    const res = await Activity.deleteOne(t.where({ _id: id }));
+    if (!res.deletedCount) throw new NotFoundError('Follow-up not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting activity:', error);
-    return NextResponse.json({ error: 'Failed to delete follow-up' }, { status: 500 });
+    return apiError(error, 'Error deleting activity:');
   }
 }

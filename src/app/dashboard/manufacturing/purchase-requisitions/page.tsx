@@ -101,18 +101,24 @@ export default function PurchaseRequisitionsPage() {
       })),
       totalEstimatedCost: calcTotal(lineItems),
     };
+    let res: Response;
     if (editing) {
-      await fetch('/api/manufacturing/purchase-requisitions', {
+      res = await fetch('/api/manufacturing/purchase-requisitions', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editing._id, ...payload }),
       });
     } else {
-      await fetch('/api/manufacturing/purchase-requisitions', {
+      res = await fetch('/api/manufacturing/purchase-requisitions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+    }
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not save');
+      return;
     }
     setOpen(false);
     setForm(emptyForm());
@@ -122,7 +128,12 @@ export default function PurchaseRequisitionsPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this purchase requisition?')) return;
-    await fetch(`/api/manufacturing/purchase-requisitions?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/manufacturing/purchase-requisitions?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not delete');
+      return;
+    }
     load();
   };
 

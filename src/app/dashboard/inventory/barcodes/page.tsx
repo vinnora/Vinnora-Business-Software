@@ -10,6 +10,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   Tile,
+  apiOk,
 } from '../_components/ui';
 
 const FORMATS = ['CODE128', 'CODE39', 'CODE93', 'EAN13', 'EAN8', 'UPC', 'ITF', 'QR'];
@@ -62,11 +63,12 @@ export default function BarcodesPage() {
       const item = items.find((i) => i._id === id);
       if (!item || item.barcode) continue;
       const newCode = `${format === 'EAN13' ? '890' : ''}${Date.now().toString().slice(-10)}`;
-      await fetch('/api/inventory/items', {
+      const res = await fetch('/api/inventory/items', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: id, barcode: newCode, barcodeFormat: format }),
       });
+      if (!(await apiOk(res))) break;
     }
     load();
   };

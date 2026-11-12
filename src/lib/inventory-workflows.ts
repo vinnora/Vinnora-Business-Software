@@ -8,6 +8,9 @@ import PurchaseOrder from '@/models/PurchaseOrder';
 import StockTransfer from '@/models/StockTransfer';
 import StockAudit from '@/models/StockAudit';
 
+/** Fields a workflow rule may never set. */
+const PROTECTED_FIELDS = new Set(['_id', 'orgId', 'userId', 'createdAt', 'updatedAt', '__v']);
+
 /**
  * Inventory rule engine. Mirrors the sales-service workflow engine.
  * Best-effort: failures never block the user request.
@@ -78,9 +81,12 @@ async function executeAction(
   action: IInventoryWorkflowAction,
   record: any,
   objectType: InventoryWorkflowObject,
-  userId: string
+  userId: string,
+  orgId?: string
 ) {
   const params = action.params || {};
+  // Stamp the workspace on anything created when the caller knows it.
+  const owner = orgId ? { userId, orgId } : { userId };
   switch (action.type) {
     case 'createPurchaseOrder': {
       if (objectType !== 'Item') break;
@@ -91,7 +97,7 @@ async function executeAction(
       const unitCost = supplier.costPrice || record.costPrice || 0;
       const lineTotal = quantity * unitCost;
       await PurchaseOrder.create({
-        userId,
+        ...owner,
         poNumber: genPONumber(),
         supplierId: supplier.supplierId,
         supplierName: supplier.supplierName,
@@ -124,7 +130,7 @@ async function executeAction(
       if (objectType !== 'Item') break;
       if (!params.fromWarehouseId || !params.toWarehouseId) break;
       await StockTransfer.create({
-        userId,
+        ...owner,
         transferNumber: genTransferNumber(),
         fromWarehouseId: params.fromWarehouseId,
         fromWarehouseName: params.fromWarehouseName || '',
@@ -150,7 +156,7 @@ async function executeAction(
     case 'createStockAudit': {
       if (!params.warehouseId) break;
       await StockAudit.create({
-        userId,
+        ...owner,
         auditNumber: genAuditNumber(),
         warehouseId: params.warehouseId,
         warehouseName: params.warehouseName || '',
@@ -161,7 +167,8 @@ async function executeAction(
       break;
     }
     case 'updateField': {
-      if (!params.field) break;
+      // Ownership/system fields are never changed by a rule.
+      if (!params.field || PROTECTED_FIELDS.has(String(params.field).split('.')[0])) break;
       record[params.field] = interpolate(String(params.value ?? ''), record) || params.value;
       await record.save();
       break;
@@ -205,18 +212,22 @@ export async function runInventoryWorkflows(opts: {
   event: InventoryWorkflowEvent;
   record: any;
   userId: string;
+  /** Workspace key stamped on records created by actions. */
+  orgId?: string;
+  /** Workspace filter from getTenant().where(); when given, the workspace's rules run instead of only this user's. */
+  scope?: Record<string, unknown>;
   changedFields?: string[];
 }) {
   try {
-    const { objectType, event, record, userId, changedFields } = opts;
-    const filter: any = { userId, objectType, active: true };
+    const { objectType, event, record, userId, orgId, scope, changedFields } = opts;
+    const filter: any = scope ? { objectType, active: true } : { userId, objectType, active: true };
     if (event === 'fieldChanged') {
       filter.triggerEvent = { $in: ['fieldChanged', 'updated'] };
     } else {
       filter.triggerEvent = event;
     }
 
-    const rules = await InventoryWorkflowRule.find(filter);
+    const rules = await InventoryWorkflowRule.find(scope ? { $and: [scope, filter] } : filter);
     for (const rule of rules) {
       if (rule.triggerEvent === 'fieldChanged') {
         if (!rule.watchFields || rule.watchFields.length === 0) continue;
@@ -225,7 +236,7 @@ export async function runInventoryWorkflows(opts: {
       if (!evalConditions(record, rule.conditions, rule.conditionLogic)) continue;
 
       for (const action of rule.actions) {
-        await executeAction(action, record, objectType, userId);
+        await executeAction(action, record, objectType, userId, orgId);
       }
       rule.runCount = (rule.runCount || 0) + 1;
       rule.lastRunAt = new Date();
@@ -239,13 +250,19 @@ export async function runInventoryWorkflows(opts: {
 /**
  * Helper for the items API to detect low stock and trigger reorder workflows.
  */
-export async function checkAndTriggerReorder(item: any, userId: string) {
+export async function checkAndTriggerReorder(
+  item: any,
+  userId: string,
+  tenant?: { orgId: string; scope: Record<string, unknown> }
+) {
+  const ws = tenant ? { orgId: tenant.orgId, scope: tenant.scope } : {};
   if (item.totalStock <= 0) {
     await runInventoryWorkflows({
       objectType: 'Item',
       event: 'outOfStock',
       record: item,
       userId,
+      ...ws,
     });
   } else if (item.reorderPoint > 0 && item.totalStock <= item.reorderPoint) {
     await runInventoryWorkflows({
@@ -253,6 +270,7 @@ export async function checkAndTriggerReorder(item: any, userId: string) {
       event: 'lowStock',
       record: item,
       userId,
+      ...ws,
     });
   }
 
@@ -266,6 +284,7 @@ export async function checkAndTriggerReorder(item: any, userId: string) {
         event: 'expiringSoon',
         record: item,
         userId,
+        ...ws,
       });
     }
   }

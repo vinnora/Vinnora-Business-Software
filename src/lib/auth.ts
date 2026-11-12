@@ -40,7 +40,11 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Profile page renamed the user: refresh the name carried in the session.
+      if (trigger === 'update' && typeof session?.name === 'string' && session.name.trim()) {
+        token.name = session.name.trim().slice(0, 80);
+      }
       if (user) {
         token.orgId = user.orgId || null;
         token.orgRole = user.orgRole || 'member';

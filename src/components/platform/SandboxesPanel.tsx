@@ -76,7 +76,7 @@ const COMPONENT_LABELS: Record<string, string> = {
   layout: 'Form Layouts',
   layoutAssignment: 'Form Layout Assignments',
   report: 'Reports',
-  dashboard: 'Dashboards',
+  dashboard: 'Home dashboards',
 };
 
 function when(s?: string) {

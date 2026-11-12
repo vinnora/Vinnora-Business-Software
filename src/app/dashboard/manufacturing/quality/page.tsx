@@ -84,18 +84,24 @@ export default function QualityPage() {
       ...form,
       defectsFound: Number(form.defectsFound) || 0,
     };
+    let res: Response;
     if (editing) {
-      await fetch('/api/manufacturing/quality', {
+      res = await fetch('/api/manufacturing/quality', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editing._id, ...payload }),
       });
     } else {
-      await fetch('/api/manufacturing/quality', {
+      res = await fetch('/api/manufacturing/quality', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+    }
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not save');
+      return;
     }
     setOpen(false);
     setForm(emptyForm());
@@ -105,7 +111,12 @@ export default function QualityPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this inspection?')) return;
-    await fetch(`/api/manufacturing/quality?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/manufacturing/quality?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not delete');
+      return;
+    }
     load();
   };
 

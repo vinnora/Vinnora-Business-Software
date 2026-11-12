@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Project from '@/models/Project';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 function generateProjectCode() {
   return 'PROJ-' + Date.now().toString().slice(-6);
@@ -11,31 +10,32 @@ function generateProjectCode() {
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
     const clientId = searchParams.get('clientId');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     if (clientId) filter.clientId = clientId;
 
-    const projects = await Project.find(filter).sort({ startDate: -1 }).limit(50);
+    const projects = await Project.find(t.where(filter)).sort({ startDate: -1 }).limit(50);
     return NextResponse.json(projects);
   } catch (error) {
-    console.error('Error fetching projects:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching projects:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    if (!body._id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const updates: Record<string, any> = sanitize(body);
     if (updates.budget) {
       updates.totalBudget = updates.budget.reduce(
         (s: number, b: any) => s + (b.budgetAmount || 0),
@@ -46,31 +46,38 @@ export async function PATCH(req: NextRequest) {
         0
       );
     }
-    const project = await Project.findByIdAndUpdate(_id, updates, { new: true });
+    const project = await Project.findOneAndUpdate(t.where({ _id: recordId(body._id) }), updates, {
+      new: true,
+      runValidators: true,
+    });
+    if (!project) throw new NotFoundError('Project not found');
     return NextResponse.json(project);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating project:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await Project.findByIdAndDelete(id);
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
+    const raw = new URL(req.url).searchParams.get('id');
+    if (!raw) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    const res = await Project.deleteOne(t.where({ _id: recordId(raw) }));
+    if (!res.deletedCount) throw new NotFoundError('Project not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting project:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
+    t.requireWrite();
 
     const body = await req.json();
     const {
@@ -92,7 +99,7 @@ export async function POST(req: NextRequest) {
     const totalBudget = budget.reduce((sum: number, b: any) => sum + b.budgetAmount, 0);
 
     const project = new Project({
-      userId,
+      ...t.stamp(),
       projectName,
       projectCode: generateProjectCode(),
       clientId,
@@ -112,7 +119,6 @@ export async function POST(req: NextRequest) {
     await project.save();
     return NextResponse.json(project, { status: 201 });
   } catch (error) {
-    console.error('Error creating project:', error);
-    return NextResponse.json({ error: 'Failed to create project' }, { status: 500 });
+    return apiError(error, 'Error creating project:');
   }
 }

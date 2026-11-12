@@ -10,6 +10,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   Badge,
+  apiOk,
 } from '../_components/ui';
 
 type Integration = {
@@ -58,28 +59,31 @@ export default function IntegrationsPage() {
 
   const save = async () => {
     if (!form.name) return;
-    await fetch('/api/accounting/integrations', {
+    const res = await fetch('/api/accounting/integrations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({ type: 'webhook', active: true, config: {}, events: [] });
     load();
   };
 
   const toggle = async (item: Integration) => {
-    await fetch('/api/accounting/integrations', {
+    const res = await fetch('/api/accounting/integrations', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: item._id, active: !item.active }),
     });
+    await apiOk(res);
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this integration?')) return;
-    await fetch(`/api/accounting/integrations?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/accounting/integrations?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

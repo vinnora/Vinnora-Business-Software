@@ -38,13 +38,16 @@ export default function SocialMediaPage() {
     const payload = { ...form, mediaUrls: (form.mediaUrls || []).filter(Boolean) };
     const method = editing ? 'PATCH' : 'POST';
     const body = editing ? { _id: editing._id, ...payload } : payload;
-    await fetch('/api/marketing/social', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch('/api/marketing/social', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error || 'Could not save'); return; }
     setOpen(false); setEditing(null); setForm({ platform: 'Facebook', content: '', status: 'Draft', mediaUrls: [''], linkUrl: '' }); load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this post?')) return;
-    await fetch(`/api/marketing/social?id=${id}`, { method: 'DELETE' }); load();
+    const res = await fetch(`/api/marketing/social?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
+    load();
   };
 
   return (

@@ -52,16 +52,13 @@ export async function runAppConnections(opts: {
   event: string;
   record: any;
   userId: string;
+  /** Workspace filter from getTenant().where(); when given, the workspace's connections run instead of only this user's. */
+  scope?: Record<string, unknown>;
 }) {
   try {
-    const { sourceApp, sourceObject, event, record, userId } = opts;
-    const connections = await AppConnection.find({
-      userId,
-      sourceApp,
-      sourceObject,
-      sourceEvent: event,
-      active: true,
-    });
+    const { sourceApp, sourceObject, event, record, userId, scope } = opts;
+    const match = { sourceApp, sourceObject, sourceEvent: event, active: true };
+    const connections = await AppConnection.find(scope ? { $and: [scope, match] } : { userId, ...match });
 
     for (const conn of connections) {
       // Check conditions if any

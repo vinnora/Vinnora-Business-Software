@@ -1,64 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import PayrollEntry from '@/models/PayrollEntry';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
 
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get('employeeId');
     const payrollPeriod = searchParams.get('payrollPeriod');
     const status = searchParams.get('status');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (employeeId) filter.employeeId = employeeId;
     if (payrollPeriod) filter.payrollPeriod = payrollPeriod;
     if (status) filter.status = status;
 
-    const entries = await PayrollEntry.find(filter).sort({ paymentDate: -1 }).limit(50);
+    const entries = await PayrollEntry.find(t.where(filter)).sort({ paymentDate: -1 }).limit(50);
     return NextResponse.json(entries);
   } catch (error) {
-    console.error('Error fetching payroll:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching payroll:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const entry = await PayrollEntry.findByIdAndUpdate(_id, updates, { new: true });
+    if (!body._id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const entry = await PayrollEntry.findOneAndUpdate(t.where({ _id: recordId(body._id) }), sanitize(body), {
+      new: true,
+      runValidators: true,
+    });
+    if (!entry) throw new NotFoundError('Payroll entry not found');
     return NextResponse.json(entry);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating payroll:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await PayrollEntry.findByIdAndDelete(id);
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
+    const raw = new URL(req.url).searchParams.get('id');
+    if (!raw) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    const res = await PayrollEntry.deleteOne(t.where({ _id: recordId(raw) }));
+    if (!res.deletedCount) throw new NotFoundError('Payroll entry not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting payroll:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
+    t.requireWrite();
 
     const body = await req.json();
     const {
@@ -101,7 +107,7 @@ export async function POST(req: NextRequest) {
     const netSalary = grossSalary - totalDeductions;
 
     const payroll = new PayrollEntry({
-      userId,
+      ...t.stamp(),
       employeeId,
       employeeName,
       payrollPeriod,
@@ -127,7 +133,6 @@ export async function POST(req: NextRequest) {
     await payroll.save();
     return NextResponse.json(payroll, { status: 201 });
   } catch (error) {
-    console.error('Error creating payroll:', error);
-    return NextResponse.json({ error: 'Failed to create payroll entry' }, { status: 500 });
+    return apiError(error, 'Error creating payroll:');
   }
 }

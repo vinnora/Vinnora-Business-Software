@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { getTenant, apiError } from '@/lib/tenant';
 import dbConnect from '@/lib/mongodb';
 import Item from '@/models/Item';
 import Warehouse from '@/models/Warehouse';
@@ -12,8 +11,7 @@ import StockAudit from '@/models/StockAudit';
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('inventory');
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type') || 'dashboard-summary';
 
@@ -30,30 +28,31 @@ export async function GET(req: NextRequest) {
           outOfStockItems,
           expiringItems,
         ] = await Promise.all([
-          Item.countDocuments({ userId }),
-          Warehouse.countDocuments({ userId, active: true }),
-          Supplier.countDocuments({ userId, active: true }),
-          PurchaseOrder.countDocuments({
-            userId,
-            status: { $in: ['draft', 'sent', 'acknowledged'] },
-          }),
-          StockTransfer.countDocuments({ userId, status: 'in-transit' }),
-          Item.countDocuments({
-            userId,
-            $expr: { $and: [{ $gt: ['$totalStock', 0] }, { $lte: ['$totalStock', '$reorderPoint'] }] },
-          }),
-          Item.countDocuments({ userId, totalStock: 0 }),
-          Item.countDocuments({
-            userId,
-            expiryDate: {
-              $gte: new Date(),
-              $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            },
-          }),
+          Item.countDocuments(t.where()),
+          Warehouse.countDocuments(t.where({ active: true })),
+          Supplier.countDocuments(t.where({ active: true })),
+          PurchaseOrder.countDocuments(
+            t.where({ status: { $in: ['draft', 'sent', 'acknowledged'] } })
+          ),
+          StockTransfer.countDocuments(t.where({ status: 'in-transit' })),
+          Item.countDocuments(
+            t.where({
+              $expr: { $and: [{ $gt: ['$totalStock', 0] }, { $lte: ['$totalStock', '$reorderPoint'] }] },
+            })
+          ),
+          Item.countDocuments(t.where({ totalStock: 0 })),
+          Item.countDocuments(
+            t.where({
+              expiryDate: {
+                $gte: new Date(),
+                $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              },
+            })
+          ),
         ]);
 
         const stockValue = await Item.aggregate([
-          { $match: { userId } },
+          { $match: t.where() },
           {
             $group: {
               _id: null,
@@ -80,7 +79,7 @@ export async function GET(req: NextRequest) {
       }
       case 'stock-by-warehouse': {
         const data = await Item.aggregate([
-          { $match: { userId } },
+          { $match: t.where() },
           { $unwind: '$warehouseStocks' },
           {
             $group: {
@@ -99,7 +98,7 @@ export async function GET(req: NextRequest) {
       }
       case 'stock-by-category': {
         const data = await Item.aggregate([
-          { $match: { userId } },
+          { $match: t.where() },
           {
             $group: {
               _id: '$category',
@@ -114,23 +113,23 @@ export async function GET(req: NextRequest) {
         break;
       }
       case 'low-stock': {
-        const items = await Item.find({
-          userId,
-          $expr: { $lte: ['$totalStock', '$reorderPoint'] },
-        })
+        const items = await Item.find(
+          t.where({ $expr: { $lte: ['$totalStock', '$reorderPoint'] } })
+        )
           .limit(100)
           .lean();
         report = { type: 'low-stock', items };
         break;
       }
       case 'expiring-soon': {
-        const items = await Item.find({
-          userId,
-          expiryDate: {
-            $gte: new Date(),
-            $lte: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
-          },
-        })
+        const items = await Item.find(
+          t.where({
+            expiryDate: {
+              $gte: new Date(),
+              $lte: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            },
+          })
+        )
           .sort({ expiryDate: 1 })
           .limit(100)
           .lean();
@@ -140,7 +139,7 @@ export async function GET(req: NextRequest) {
       case 'aging': {
         // Stock aging buckets based on createdAt
         const now = Date.now();
-        const items = await Item.find({ userId, totalStock: { $gt: 0 } }).limit(500).lean();
+        const items = await Item.find(t.where({ totalStock: { $gt: 0 } })).limit(500).lean();
         const buckets = { fresh: 0, mature: 0, slow: 0, dead: 0 };
         items.forEach((it: any) => {
           const ageDays = (now - new Date(it.createdAt).getTime()) / (1000 * 60 * 60 * 24);
@@ -155,7 +154,7 @@ export async function GET(req: NextRequest) {
       }
       case 'po-summary': {
         const data = await PurchaseOrder.aggregate([
-          { $match: { userId } },
+          { $match: t.where() },
           {
             $group: {
               _id: '$status',
@@ -169,7 +168,7 @@ export async function GET(req: NextRequest) {
       }
       case 'supplier-performance': {
         const data = await PurchaseOrder.aggregate([
-          { $match: { userId } },
+          { $match: t.where() },
           {
             $group: {
               _id: '$supplierName',
@@ -188,7 +187,6 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json(report);
   } catch (error) {
-    console.error('Inventory report error:', error);
-    return NextResponse.json({ type: 'error' }, { status: 200 });
+    return apiError(error, 'Inventory report error:');
   }
 }

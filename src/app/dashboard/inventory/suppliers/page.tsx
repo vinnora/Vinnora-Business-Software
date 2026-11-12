@@ -13,6 +13,7 @@ import {
   Badge,
   Tile,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type Supplier = {
@@ -85,19 +86,18 @@ export default function SuppliersPage() {
           ? form.preferredCategories.split(',').map((c: string) => c.trim()).filter(Boolean)
           : form.preferredCategories || [],
     };
-    if (editing) {
-      await fetch('/api/inventory/suppliers', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: editing._id, ...payload }),
-      });
-    } else {
-      await fetch('/api/inventory/suppliers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-    }
+    const res = editing
+      ? await fetch('/api/inventory/suppliers', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _id: editing._id, ...payload }),
+        })
+      : await fetch('/api/inventory/suppliers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setEditing(null);
     load();
@@ -105,7 +105,8 @@ export default function SuppliersPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this supplier?')) return;
-    await fetch(`/api/inventory/suppliers?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/inventory/suppliers?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 
@@ -132,11 +133,12 @@ export default function SuppliersPage() {
         },
       ],
     };
-    await fetch('/api/inventory/items', {
+    const res = await fetch('/api/inventory/items', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updated),
     });
+    if (!(await apiOk(res))) return;
     loadItems();
   };
 
@@ -146,11 +148,12 @@ export default function SuppliersPage() {
       _id: item._id,
       suppliers: (item.suppliers || []).filter((sm: any) => sm.supplierId !== selectedSupplier._id),
     };
-    await fetch('/api/inventory/items', {
+    const res = await fetch('/api/inventory/items', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updated),
     });
+    if (!(await apiOk(res))) return;
     loadItems();
   };
 

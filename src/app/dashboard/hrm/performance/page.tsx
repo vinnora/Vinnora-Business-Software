@@ -50,13 +50,16 @@ export default function PerformancePage() {
     if (!form.employeeId || !form.period) return;
     const method = editing ? 'PATCH' : 'POST';
     const payload = editing ? { _id: editing._id, ...form } : form;
-    await fetch('/api/hrm/performance', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch('/api/hrm/performance', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not save'); return; }
     setOpen(false); setEditing(null); setForm({}); load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this review?')) return;
-    await fetch(`/api/hrm/performance?id=${id}`, { method: 'DELETE' }); load();
+    const res = await fetch(`/api/hrm/performance?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not delete'); }
+    load();
   };
 
   const emptyForm = () => ({

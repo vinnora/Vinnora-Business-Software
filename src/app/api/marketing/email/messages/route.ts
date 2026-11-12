@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import MktEmailMessage from '@/models/MktEmailMessage';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('marketing');
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search');
     const status = searchParams.get('status');
     const campaignId = searchParams.get('campaignId');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     if (campaignId) filter.campaignId = campaignId;
     if (search) {
@@ -23,52 +21,54 @@ export async function GET(req: NextRequest) {
         { subject: { $regex: search, $options: 'i' } },
       ];
     }
-    const items = await MktEmailMessage.find(filter).sort({ updatedAt: -1 }).limit(500);
+    const items = await MktEmailMessage.find(t.where(filter)).sort({ updatedAt: -1 }).limit(500);
     return NextResponse.json(items);
   } catch (error) {
-    console.error('Error fetching email messages:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching email messages:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('marketing');
+    t.requireWrite();
     const body = await req.json();
     if (!body.name || !body.subject) {
       return NextResponse.json({ error: 'name and subject required' }, { status: 400 });
     }
-    const item = await MktEmailMessage.create({ ...body, userId });
+    const item = await MktEmailMessage.create({ ...sanitize(body), ...t.stamp() });
     return NextResponse.json(item, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error creating email message:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('marketing');
+    t.requireWrite();
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const item = await MktEmailMessage.findByIdAndUpdate(_id, updates, { new: true });
+    const id = recordId(body._id);
+    const item = await MktEmailMessage.findOneAndUpdate(t.where({ _id: id }), sanitize(body), { new: true, runValidators: true });
+    if (!item) throw new NotFoundError('Email message not found');
     return NextResponse.json(item);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating email message:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await MktEmailMessage.findByIdAndDelete(id);
+    const t = await getTenant('marketing');
+    t.requireWrite();
+    const id = recordId(new URL(req.url).searchParams.get('id'));
+    const res = await MktEmailMessage.deleteOne(t.where({ _id: id }));
+    if (!res.deletedCount) throw new NotFoundError('Email message not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting email message:');
   }
 }

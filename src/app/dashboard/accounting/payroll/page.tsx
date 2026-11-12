@@ -12,6 +12,7 @@ import {
   SecondaryButton,
   Badge,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type PayrollEntry = {
@@ -69,7 +70,7 @@ export default function PayrollPage() {
 
   const save = async () => {
     if (!form.employeeName || !form.baseSalary) return;
-    await fetch('/api/accounting/payroll', {
+    const res = await fetch('/api/accounting/payroll', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -82,6 +83,7 @@ export default function PayrollPage() {
         providentFund: Number(form.providentFund),
       }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({
       paymentDate: new Date().toISOString().slice(0, 10),
@@ -96,17 +98,19 @@ export default function PayrollPage() {
   };
 
   const updateStatus = async (id: string, status: string) => {
-    await fetch('/api/accounting/payroll', {
+    const res = await fetch('/api/accounting/payroll', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, status }),
     });
+    await apiOk(res);
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this payroll entry?')) return;
-    await fetch(`/api/accounting/payroll?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/accounting/payroll?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

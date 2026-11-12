@@ -12,6 +12,7 @@ import {
   SecondaryButton,
   Badge,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type Asset = {
@@ -66,7 +67,7 @@ export default function AssetsPage() {
 
   const save = async () => {
     if (!form.assetName || !form.category || !form.originalCost) return;
-    await fetch('/api/accounting/assets', {
+    const res = await fetch('/api/accounting/assets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -76,6 +77,7 @@ export default function AssetsPage() {
         salvageValue: Number(form.salvageValue),
       }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({
       purchaseDate: new Date().toISOString().slice(0, 10),
@@ -88,17 +90,19 @@ export default function AssetsPage() {
   };
 
   const updateStatus = async (id: string, status: string) => {
-    await fetch('/api/accounting/assets', {
+    const res = await fetch('/api/accounting/assets', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, status }),
     });
+    await apiOk(res);
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this asset?')) return;
-    await fetch(`/api/accounting/assets?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/accounting/assets?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

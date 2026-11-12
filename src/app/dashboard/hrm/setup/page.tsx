@@ -94,6 +94,12 @@ const emptyWfForm = { name: '', objectType: 'Employee', triggerEvent: 'created',
 
 export default function HrmSetupPage() {
   const [tab, setTab] = useState<Tab>('departments');
+  // Open the tab named in ?tab= (e.g. when coming back from workspace-wide Settings).
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from the URL after hydration
+    if (t && TABS.some((x) => x.id === t)) setTab(t as Tab);
+  }, []);
 
   return (
     <>
@@ -159,11 +165,12 @@ function DepartmentsTab() {
     if (!form.name) return;
     const method = editing ? 'PATCH' : 'POST';
     const payload = editing ? { _id: editing._id, ...form } : form;
-    await fetch('/api/hrm/departments', {
+    const res = await fetch('/api/hrm/departments', {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not save'); return; }
     setOpen(false);
     setEditing(null);
     setForm({ ...emptyDeptForm });
@@ -172,7 +179,8 @@ function DepartmentsTab() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this department?')) return;
-    await fetch(`/api/hrm/departments?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/hrm/departments?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not delete'); }
     load();
   };
 
@@ -367,11 +375,12 @@ function WorkflowsTab() {
     if (!form.name) return;
     const method = editing ? 'PATCH' : 'POST';
     const payload = editing ? { _id: editing._id, ...form } : form;
-    await fetch('/api/hrm/workflows', {
+    const res = await fetch('/api/hrm/workflows', {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not save'); return; }
     setOpen(false);
     setEditing(null);
     setForm({ ...emptyWfForm });
@@ -379,17 +388,19 @@ function WorkflowsTab() {
   };
 
   const toggleWorkflow = async (w: WorkflowRule) => {
-    await fetch('/api/hrm/workflows', {
+    const res = await fetch('/api/hrm/workflows', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: w._id, active: !w.active }),
     });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not save'); }
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this workflow rule?')) return;
-    await fetch(`/api/hrm/workflows?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/hrm/workflows?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not delete'); }
     load();
   };
 

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import StockTransfer from '@/models/StockTransfer';
 import Item from '@/models/Item';
 import { runInventoryWorkflows } from '@/lib/inventory-workflows';
+import { getTenant, sanitize, recordId, apiError, NotFoundError, type Tenant } from '@/lib/tenant';
+import { isObjectIdString } from '../_lib/object-id-scope';
 
 function genTransferNumber() {
   const year = new Date().getFullYear();
@@ -13,12 +13,14 @@ function genTransferNumber() {
 }
 
 async function adjustStock(
+  t: Tenant,
   itemId: string,
   warehouseId: string,
   warehouseName: string,
   delta: number
 ) {
-  const item = await Item.findById(itemId);
+  if (!isObjectIdString(itemId)) return;
+  const item = await Item.findOne(t.where({ _id: itemId }));
   if (!item) return;
   const idx = item.warehouseStocks.findIndex((w: any) => w.warehouseId === warehouseId);
   if (idx >= 0) {
@@ -44,24 +46,23 @@ async function adjustStock(
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('inventory');
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
-    const filter: any = { userId };
+    const filter: any = {};
     if (status) filter.status = status;
-    const items = await StockTransfer.find(filter).sort({ initiatedDate: -1 }).limit(200);
+    const items = await StockTransfer.find(t.where(filter)).sort({ initiatedDate: -1 }).limit(200);
     return NextResponse.json(items);
-  } catch {
-    return NextResponse.json([], { status: 200 });
+  } catch (error) {
+    return apiError(error, 'Error fetching stock transfers:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('inventory');
+    t.requireWrite();
     const body = await req.json();
     if (!body.fromWarehouseId || !body.toWarehouseId || !body.lines?.length) {
       return NextResponse.json(
@@ -73,32 +74,36 @@ export async function POST(req: NextRequest) {
       (s: number, l: any) => s + (l.requestedQuantity || 0),
       0
     );
-    const t = await StockTransfer.create({
-      ...body,
-      userId,
+    const transfer = await StockTransfer.create({
+      ...sanitize(body),
+      ...t.stamp(),
       transferNumber: body.transferNumber || genTransferNumber(),
       totalQuantity,
     });
-    return NextResponse.json(t, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed' }, { status: 500 });
+    return NextResponse.json(transfer, { status: 201 });
+  } catch (error) {
+    return apiError(error, 'Error creating stock transfer:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('inventory');
+    t.requireWrite();
     const body = await req.json();
     const { _id, action, ...updates } = body;
     if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const transferId = recordId(_id);
 
-    const transfer = await StockTransfer.findById(_id);
-    if (!transfer) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const transfer = await StockTransfer.findOne(t.where({ _id: transferId }));
+    if (!transfer) throw new NotFoundError('Stock transfer not found');
 
     if (action === 'ship') {
       // Decrement from source warehouse
       for (const line of transfer.lines) {
         await adjustStock(
+          t,
           line.itemId,
           transfer.fromWarehouseId,
           transfer.fromWarehouseName,
@@ -114,6 +119,8 @@ export async function PATCH(req: NextRequest) {
         event: 'shipped',
         record: transfer,
         userId: transfer.userId,
+        orgId: t.orgId,
+        scope: t.where(),
       });
       return NextResponse.json(transfer);
     }
@@ -122,6 +129,7 @@ export async function PATCH(req: NextRequest) {
       // Increment at destination warehouse
       for (const line of transfer.lines) {
         await adjustStock(
+          t,
           line.itemId,
           transfer.toWarehouseId,
           transfer.toWarehouseName,
@@ -137,26 +145,35 @@ export async function PATCH(req: NextRequest) {
         event: 'received',
         record: transfer,
         userId: transfer.userId,
+        orgId: t.orgId,
+        scope: t.where(),
       });
       return NextResponse.json(transfer);
     }
 
-    const updated = await StockTransfer.findByIdAndUpdate(_id, updates, { new: true });
+    const updated = await StockTransfer.findOneAndUpdate(t.where({ _id: transferId }), sanitize(updates), {
+      new: true,
+      runValidators: true,
+    });
+    if (!updated) throw new NotFoundError('Stock transfer not found');
     return NextResponse.json(updated);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error updating stock transfer:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('inventory');
+    t.requireWrite();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await StockTransfer.findByIdAndDelete(id);
+    const res = await StockTransfer.deleteOne(t.where({ _id: recordId(id) }));
+    if (!res.deletedCount) throw new NotFoundError('Stock transfer not found');
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+  } catch (error) {
+    return apiError(error, 'Error deleting stock transfer:');
   }
 }

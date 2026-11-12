@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { UserAvatar } from '@/components/UserAvatar';
 import { CustomObjectNav } from '@/components/platform/CustomObjectNav';
 import type { ReactNode } from 'react';
 import { SalesServiceIcon } from '@/components/ModuleIcon';
@@ -161,9 +162,7 @@ export default function SalesServiceLayout({ children }: { children: ReactNode }
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </button>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0096C7] to-[#012A4A] flex items-center justify-center text-white text-sm font-semibold">
-              U
-            </div>
+            <UserAvatar className="bg-gradient-to-br from-[#0096C7] to-[#012A4A]" />
           </div>
         </header>
 

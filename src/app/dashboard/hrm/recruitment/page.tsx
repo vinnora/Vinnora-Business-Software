@@ -72,26 +72,32 @@ export default function RecruitmentPage() {
     if (!form.title || !form.department) return;
     const method = editing ? 'PATCH' : 'POST';
     const payload = editing ? { _id: editing._id, ...form } : form;
-    await fetch('/api/hrm/recruitment', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch('/api/hrm/recruitment', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not save'); return; }
     setOpen(false); setEditing(null); setForm({}); loadJobs();
   };
 
   const removeJob = async (id: string) => {
     if (!confirm('Delete this job posting?')) return;
-    await fetch(`/api/hrm/recruitment?id=${id}`, { method: 'DELETE' }); loadJobs();
+    const res = await fetch(`/api/hrm/recruitment?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not delete'); }
+    loadJobs();
   };
 
   const saveApplicant = async () => {
     if (!appForm.jobPostingId || !appForm.firstName || !appForm.lastName || !appForm.email) return;
     const method = appEditing ? 'PATCH' : 'POST';
     const payload = appEditing ? { _id: appEditing._id, ...appForm } : appForm;
-    await fetch('/api/hrm/applicants', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch('/api/hrm/applicants', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not save'); return; }
     setAppOpen(false); setAppEditing(null); setAppForm({}); loadApplicants();
   };
 
   const removeApplicant = async (id: string) => {
     if (!confirm('Delete this applicant?')) return;
-    await fetch(`/api/hrm/applicants?id=${id}`, { method: 'DELETE' }); loadApplicants();
+    const res = await fetch(`/api/hrm/applicants?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not delete'); }
+    loadApplicants();
   };
 
   const renderStars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);

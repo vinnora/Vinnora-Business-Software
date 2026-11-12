@@ -30,7 +30,7 @@ export function ModuleAccessLink({ app }: { app: AppKey }) {
         {items.map((i) => (
           <Link
             key={i.tab}
-            href={`/dashboard/setup?tab=${i.tab}`}
+            href={`/dashboard/setup?tab=${i.tab}&from=${app}`}
             className="block bg-white border border-[var(--p-border)] rounded-lg p-4 hover:border-[var(--p-accent)] hover:shadow-sm transition"
           >
             <div className="font-medium text-[var(--p-accent)]">{i.title} →</div>

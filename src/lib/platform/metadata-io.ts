@@ -65,7 +65,7 @@ export const COMPONENT_LABELS: Record<ComponentType, string> = {
   layout: 'Form Layout',
   layoutAssignment: 'Form Layout Assignment',
   report: 'Report',
-  dashboard: 'Dashboard',
+  dashboard: 'Home Dashboard',
 };
 
 type Data = Record<string, unknown>;
@@ -137,7 +137,7 @@ export async function exportComponents(tenant: string): Promise<Component[]> {
     PageLayout.find(q).lean(),
     LayoutAssignment.find(q).lean(),
     Report.find({ ...q, folder: 'public' }).lean(),
-    Dashboard.find({ ...q, folder: 'public' }).lean(),
+    Dashboard.find({ ...q, appKey: { $exists: true } }).lean(),
   ]);
   const profById = new Map(profiles.map((p) => [String(p._id), profileKey(p as Data)]));
   const setById = new Map(sets.map((s) => [String(s._id), String(s.apiName)]));

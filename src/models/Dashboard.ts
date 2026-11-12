@@ -12,8 +12,14 @@ export interface IDashboardComponent {
   aggregateIndex?: number;
 }
 
+/**
+ * One shared Home dashboard per app (appKey): the app's Home page shows its
+ * default metrics followed by these report components. Dashboards without an
+ * appKey are from the retired standalone Dashboards feature and are unused.
+ */
 export interface IDashboard extends Document {
   orgId: string;
+  appKey?: string;
   name: string;
   apiName: string;
   description?: string;
@@ -28,6 +34,7 @@ export interface IDashboard extends Document {
 const DashboardSchema = new Schema<IDashboard>(
   {
     orgId: { type: String, required: true, index: true },
+    appKey: { type: String },
     name: { type: String, required: true },
     apiName: { type: String, required: true },
     description: { type: String },
@@ -51,5 +58,6 @@ const DashboardSchema = new Schema<IDashboard>(
 );
 
 DashboardSchema.index({ orgId: 1, apiName: 1 }, { unique: true });
+DashboardSchema.index({ orgId: 1, appKey: 1 });
 
 export default mongoose.models.Dashboard || mongoose.model<IDashboard>('Dashboard', DashboardSchema);

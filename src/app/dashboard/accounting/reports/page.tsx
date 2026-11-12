@@ -93,6 +93,7 @@ export default function ReportsPage() {
 }
 
 function ReportRenderer({ type, data }: { type: string; data: any }) {
+  if (data?.error) return <div className="text-sm text-red-600">{data.error}</div>;
   if (type === 'income-statement') {
     return (
       <div>

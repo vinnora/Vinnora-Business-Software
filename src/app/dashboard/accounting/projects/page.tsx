@@ -12,6 +12,7 @@ import {
   SecondaryButton,
   Badge,
   fmtINR,
+  apiOk,
 } from '../_components/ui';
 
 type Phase = { phase: string; budgetAmount: number; actualSpent: number };
@@ -68,7 +69,7 @@ export default function ProjectsPage() {
 
   const save = async () => {
     if (!form.projectName || !form.clientName) return;
-    await fetch('/api/accounting/projects', {
+    const res = await fetch('/api/accounting/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -81,6 +82,7 @@ export default function ProjectsPage() {
         })),
       }),
     });
+    if (!(await apiOk(res))) return;
     setOpen(false);
     setForm({
       startDate: new Date().toISOString().slice(0, 10),
@@ -91,17 +93,19 @@ export default function ProjectsPage() {
   };
 
   const updateStatus = async (id: string, status: string) => {
-    await fetch('/api/accounting/projects', {
+    const res = await fetch('/api/accounting/projects', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: id, status }),
     });
+    await apiOk(res);
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this project?')) return;
-    await fetch(`/api/accounting/projects?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/accounting/projects?id=${id}`, { method: 'DELETE' });
+    if (!(await apiOk(res, 'Could not delete'))) return;
     load();
   };
 

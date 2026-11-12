@@ -3,7 +3,7 @@ import { ReportsHome } from '@/components/platform/ReportsHome';
 
 export default function ReportsPage() {
   return (
-    <PlatformShell title="Reports & Dashboards">
+    <PlatformShell title="Reports">
       <ReportsHome />
     </PlatformShell>
   );

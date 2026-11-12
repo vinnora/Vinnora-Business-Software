@@ -1,6 +1,9 @@
 import HrmWorkflowRule from '@/models/HrmWorkflowRule';
 import type { HrmWorkflowObject, HrmWorkflowEvent } from '@/models/HrmWorkflowRule';
 
+/** Fields a workflow rule may never set. */
+const PROTECTED_FIELDS = new Set(['_id', 'orgId', 'userId', 'createdAt', 'updatedAt', '__v']);
+
 function getField(obj: any, path: string): any {
   return path.split('.').reduce((acc, k) => (acc == null ? acc : acc[k]), obj);
 }
@@ -36,7 +39,8 @@ async function executeAction(action: any, record: any, objectType: string, userI
   const params = action.params || {};
   switch (action.type) {
     case 'updateField': {
-      if (!params.field) break;
+      // Ownership/system fields are never changed by a rule.
+      if (!params.field || PROTECTED_FIELDS.has(String(params.field).split('.')[0])) break;
       record[params.field] = interpolate(String(params.value ?? ''), record) || params.value;
       await record.save();
       break;
@@ -76,18 +80,20 @@ export async function runHrmWorkflows(opts: {
   event: HrmWorkflowEvent;
   record: any;
   userId: string;
+  /** Workspace filter from getTenant().where(); when given, the workspace's rules run instead of only this user's. */
+  scope?: Record<string, unknown>;
   changedFields?: string[];
 }) {
   try {
-    const { objectType, event, record, userId, changedFields } = opts;
-    const filter: any = { userId, objectType, active: true };
+    const { objectType, event, record, userId, scope, changedFields } = opts;
+    const filter: any = scope ? { objectType, active: true } : { userId, objectType, active: true };
     if (event === 'fieldChanged') {
       filter.triggerEvent = { $in: ['fieldChanged', 'updated'] };
     } else {
       filter.triggerEvent = event;
     }
 
-    const rules = await HrmWorkflowRule.find(filter);
+    const rules = await HrmWorkflowRule.find(scope ? { $and: [scope, filter] } : filter);
     for (const rule of rules) {
       if (rule.triggerEvent === 'fieldChanged') {
         if (!rule.watchFields || rule.watchFields.length === 0) continue;

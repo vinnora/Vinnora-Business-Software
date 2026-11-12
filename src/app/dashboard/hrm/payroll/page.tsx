@@ -66,13 +66,16 @@ export default function PayrollPage() {
     };
     const method = editing ? 'PATCH' : 'POST';
     const body = editing ? { _id: editing._id, ...payload } : payload;
-    await fetch('/api/hrm/payroll', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch('/api/hrm/payroll', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not save'); return; }
     setOpen(false); setEditing(null); setForm(emptyForm()); load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this payroll record?')) return;
-    await fetch(`/api/hrm/payroll?id=${id}`, { method: 'DELETE' }); load();
+    const res = await fetch(`/api/hrm/payroll?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || 'Could not delete'); }
+    load();
   };
 
   return (

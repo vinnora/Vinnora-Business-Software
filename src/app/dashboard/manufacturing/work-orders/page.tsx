@@ -102,18 +102,24 @@ export default function WorkOrdersPage() {
       quantity: Number(form.quantity) || 0,
       completedQty: Number(form.completedQty) || 0,
     };
+    let res: Response;
     if (editing) {
-      await fetch('/api/manufacturing/work-orders', {
+      res = await fetch('/api/manufacturing/work-orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editing._id, ...payload }),
       });
     } else {
-      await fetch('/api/manufacturing/work-orders', {
+      res = await fetch('/api/manufacturing/work-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+    }
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not save');
+      return;
     }
     setOpen(false);
     setForm(emptyForm());
@@ -123,7 +129,12 @@ export default function WorkOrdersPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this work order?')) return;
-    await fetch(`/api/manufacturing/work-orders?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/manufacturing/work-orders?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Could not delete');
+      return;
+    }
     load();
   };
 

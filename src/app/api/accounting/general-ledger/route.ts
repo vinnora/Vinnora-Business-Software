@@ -1,30 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import GeneralLedger from '@/models/GeneralLedger';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
 
     const { searchParams } = new URL(req.url);
     const accountId = searchParams.get('accountId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    const filter: any = { userId, status: 'posted' };
+    const filter: Record<string, unknown> = { status: 'posted' };
     if (accountId) filter.accountId = accountId;
 
     if (startDate || endDate) {
-      filter.date = {};
-      if (startDate) filter.date.$gte = new Date(startDate);
-      if (endDate) filter.date.$lte = new Date(endDate);
+      const date: Record<string, Date> = {};
+      if (startDate) date.$gte = new Date(startDate);
+      if (endDate) date.$lte = new Date(endDate);
+      filter.date = date;
     }
 
-    const ledgerEntries = await GeneralLedger.find(filter).sort({ date: -1 }).limit(100);
+    const ledgerEntries = await GeneralLedger.find(t.where(filter)).sort({ date: -1 }).limit(100);
 
     // Calculate running balance
     const withBalance = ledgerEntries.map((entry, index) => {
@@ -40,42 +39,50 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(withBalance);
   } catch (error) {
-    console.error('Error fetching general ledger:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching general ledger:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const entry = await GeneralLedger.findByIdAndUpdate(_id, updates, { new: true });
+    if (!body._id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const entry = await GeneralLedger.findOneAndUpdate(t.where({ _id: recordId(body._id) }), sanitize(body), {
+      new: true,
+      runValidators: true,
+    });
+    if (!entry) throw new NotFoundError('Ledger entry not found');
     return NextResponse.json(entry);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating ledger entry:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await GeneralLedger.findByIdAndDelete(id);
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
+    const raw = new URL(req.url).searchParams.get('id');
+    if (!raw) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    const res = await GeneralLedger.deleteOne(t.where({ _id: recordId(raw) }));
+    if (!res.deletedCount) throw new NotFoundError('Ledger entry not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting ledger entry:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
+    t.requireWrite();
 
     const body = await req.json();
     const { transactionId, accountId, debit, credit, description, referenceNumber } = body;
@@ -88,7 +95,7 @@ export async function POST(req: NextRequest) {
     }
 
     const entry = new GeneralLedger({
-      userId,
+      ...t.stamp(),
       transactionId,
       accountId,
       debit: debit || 0,
@@ -102,7 +109,6 @@ export async function POST(req: NextRequest) {
     await entry.save();
     return NextResponse.json(entry, { status: 201 });
   } catch (error) {
-    console.error('Error creating ledger entry:', error);
-    return NextResponse.json({ error: 'Failed to create ledger entry' }, { status: 500 });
+    return apiError(error, 'Error creating ledger entry:');
   }
 }

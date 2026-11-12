@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Asset from '@/models/Asset';
 import { runAccountingWorkflows } from '@/lib/accounting-workflows';
+import { getTenant, sanitize, recordId, apiError, NotFoundError } from '@/lib/tenant';
 
 function generateAssetNumber() {
   return 'AST-' + Date.now().toString().slice(-6);
@@ -12,59 +11,72 @@ function generateAssetNumber() {
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
 
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category');
     const status = searchParams.get('status');
 
-    const filter: any = { userId };
+    const filter: Record<string, unknown> = {};
     if (category) filter.category = category;
     if (status) filter.status = status;
 
-    const assets = await Asset.find(filter).sort({ purchaseDate: -1 }).limit(50);
+    const assets = await Asset.find(t.where(filter)).sort({ purchaseDate: -1 }).limit(50);
     return NextResponse.json(assets);
   } catch (error) {
-    console.error('Error fetching assets:', error);
-    return NextResponse.json([], { status: 200 });
+    return apiError(error, 'Error fetching assets:');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
     const body = await req.json();
-    const { _id, ...updates } = body;
-    if (!_id) return NextResponse.json({ error: '_id required' }, { status: 400 });
-    const asset = await Asset.findByIdAndUpdate(_id, updates, { new: true });
-    if (asset) {
-      await runAccountingWorkflows({ objectType: 'Asset', event: 'fieldChanged', record: asset, userId: asset.userId, changedFields: Object.keys(updates) });
-    }
+    if (!body._id) return NextResponse.json({ error: '_id required' }, { status: 400 });
+    const updates = sanitize(body);
+    const asset = await Asset.findOneAndUpdate(t.where({ _id: recordId(body._id) }), updates, {
+      new: true,
+      runValidators: true,
+    });
+    if (!asset) throw new NotFoundError('Asset not found');
+    await runAccountingWorkflows({
+      objectType: 'Asset',
+      event: 'fieldChanged',
+      record: asset,
+      userId: asset.userId,
+      scope: t.where(),
+      changedFields: Object.keys(updates),
+    });
     return NextResponse.json(asset);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+    return apiError(error, 'Error updating asset:');
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await Asset.findByIdAndDelete(id);
+    const t = await getTenant('accounting');
+    t.requireWrite();
+
+    const raw = new URL(req.url).searchParams.get('id');
+    if (!raw) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    const res = await Asset.deleteOne(t.where({ _id: recordId(raw) }));
+    if (!res.deletedCount) throw new NotFoundError('Asset not found');
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    return apiError(error, 'Error deleting asset:');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.email || 'dev-user-id';
+    const t = await getTenant('accounting');
+    t.requireWrite();
 
     const body = await req.json();
     const {
@@ -94,7 +106,7 @@ export async function POST(req: NextRequest) {
     const bookValue = originalCost - totalDepreciation;
 
     const asset = new Asset({
-      userId,
+      ...t.stamp(),
       assetName,
       assetNumber: generateAssetNumber(),
       category,
@@ -114,11 +126,10 @@ export async function POST(req: NextRequest) {
     });
 
     await asset.save();
-    await runAccountingWorkflows({ objectType: 'Asset', event: 'created', record: asset, userId });
+    await runAccountingWorkflows({ objectType: 'Asset', event: 'created', record: asset, userId: asset.userId, scope: t.where() });
 
     return NextResponse.json(asset, { status: 201 });
   } catch (error) {
-    console.error('Error creating asset:', error);
-    return NextResponse.json({ error: 'Failed to create asset' }, { status: 500 });
+    return apiError(error, 'Error creating asset:');
   }
 }

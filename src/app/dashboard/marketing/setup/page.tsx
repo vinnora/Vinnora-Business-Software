@@ -88,6 +88,12 @@ const SEG_TYPES = ['Static', 'Dynamic'];
 
 export default function MarketingSetupPage() {
   const [tab, setTab] = useState<Tab>('general');
+  // Open the tab named in ?tab= (e.g. when coming back from workspace-wide Settings).
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from the URL after hydration
+    if (t && TABS.some((x) => x.id === t)) setTab(t as Tab);
+  }, []);
 
   return (
     <>
@@ -244,11 +250,12 @@ function SegmentsTab() {
     if (!form.name) return;
     const method = editing ? 'PATCH' : 'POST';
     const payload = editing ? { _id: editing._id, ...form } : form;
-    await fetch('/api/marketing/segments', {
+    const res = await fetch('/api/marketing/segments', {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error || 'Could not save'); return; }
     setOpen(false);
     setEditing(null);
     setForm({ name: '', description: '', type: 'Dynamic' });
@@ -257,7 +264,8 @@ function SegmentsTab() {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this segment?')) return;
-    await fetch(`/api/marketing/segments?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/marketing/segments?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     load();
   };
 
@@ -347,17 +355,19 @@ function AutomationsTab() {
   useEffect(() => { load(); }, []);
 
   const toggleAutomation = async (a: Automation) => {
-    await fetch('/api/marketing/automation', {
+    const res = await fetch('/api/marketing/automation', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _id: a._id, active: !a.active }),
     });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not save');
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this automation?')) return;
-    await fetch(`/api/marketing/automation?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/marketing/automation?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error || 'Could not delete');
     load();
   };
 
